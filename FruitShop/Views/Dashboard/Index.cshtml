@@ -41,6 +41,9 @@
             <p class="text-muted uppercase font-bold tracking-widest" style="font-size: 20px !important;">Tình hình kinh doanh thời gian thực</p>
         </div>
         <div class="col-md-6 text-md-end">
+            <button id="btnSyncSearch" class="btn btn-outline-primary me-2 px-4 py-3 rounded-2xl shadow-sm border-theme bg-card-theme font-bold uppercase tracking-wider" style="font-size: 16px !important;">
+                <i class="bi bi-arrow-repeat me-2"></i> Đồng bộ Meilisearch
+            </button>
             <div class="stat-card d-inline-flex px-6 py-4 rounded-2xl shadow-lg border-theme bg-card-theme position-relative" style="cursor: pointer;" onclick="document.getElementById('datePicker').showPicker()">
                 <span class="fw-bold text-primary uppercase tracking-wider" style="font-size: 18px !important; padding: 0 14px; display: inline-flex; align-items: center;">
                     <i class="bi bi-calendar3 me-3"></i> Ngày: @ViewData["DisplayDate"]

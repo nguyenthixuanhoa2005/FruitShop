@@ -381,13 +381,17 @@
                 const iconBox = document.getElementById('createModalIconBox'); const icon = document.getElementById('createModalIcon');
                 const title = document.getElementById('createModalTitle'); const submitBtn = document.getElementById('submitCreateBtn');
                 if (type === 'Import') { 
-                    title.innerText = "Lập Phiếu Nhập Kho"; icon.className = "bi bi-box-arrow-in-down"; 
-                    iconBox.className = "w-12 h-12 rounded-2xl flex items-center justify-center bg-green-500/10 text-green-400 border border-green-500/20"; 
-                    submitBtn.className = "w-full py-5 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold uppercase text-[11px] tracking-widest shadow-xl transition-all";
+                    title.innerText = "Lập Phiếu Nhập Kho"; 
+                    title.className = "text-2xl font-black text-green-600 dark:text-green-400 tracking-tighter uppercase";
+                    icon.className = "bi bi-box-arrow-in-down"; 
+                    iconBox.className = "w-12 h-12 rounded-2xl flex items-center justify-center bg-green-500/10 text-green-400 border border-green-500/20";
+                    submitBtn.className = "w-full py-5 bg-green-600 hover:bg-green-500 theme-contrast rounded-xl font-bold uppercase text-[11px] tracking-widest shadow-xl transition-all";
                 } else { 
-                    title.innerText = "Lập Phiếu Xuất Kho"; icon.className = "bi bi-box-arrow-up"; 
-                    iconBox.className = "w-12 h-12 rounded-2xl flex items-center justify-center bg-red-500/10 text-red-400 border border-red-500/20"; 
-                    submitBtn.className = "w-full py-5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold uppercase text-[11px] tracking-widest shadow-xl transition-all";
+                    title.innerText = "Lập Phiếu Xuất Kho"; 
+                    title.className = "text-2xl font-black text-red-600 dark:text-red-400 tracking-tighter uppercase";
+                    icon.className = "bi bi-box-arrow-up"; 
+                    iconBox.className = "w-12 h-12 rounded-2xl flex items-center justify-center bg-red-500/10 text-red-400 border border-red-500/20";
+                    submitBtn.className = "w-full py-5 bg-red-600 hover:bg-red-500 theme-contrast rounded-xl font-bold uppercase text-[11px] tracking-widest shadow-xl transition-all";
                 }
                 document.getElementById('createReceiptModal').classList.remove('hidden');
             }

@@ -11,12 +11,24 @@
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
+<style>
+    .dark-mode .dark-green-text {
+        color: #10b981 !important; /* Emerald/Green */
+    }
+    .dark-mode .dark-orange-text {
+        color: #f59e0b !important; /* Amber/Orange */
+    }
+    .dark-mode .dark-label-muted {
+        color: #94a3b8 !important; /* Muted Slate */
+    }
+</style>
+
 @Html.AntiForgeryToken()
 
 <div class="min-h-screen pt-0 px-6 pb-20">
     <!-- Header -->
     <div class="flex items-center justify-between mb-2">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Quản lý mã giảm giá</h1>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight theme-contrast">Quản lý mã giảm giá</h1>
         <div class="flex items-center gap-4">
             <div class="px-4 py-2 bg-blue-600/10 border border-blue-500/20 rounded-xl flex items-center gap-3">
                 <div class="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center text-blue-400"><i class="bi bi-ticket-perforated"></i></div>
@@ -88,7 +100,7 @@
                     <th class="px-4 py-3 text-left w-16 sticky-col">STT</th>
                     <th class="px-4 py-3 text-left">Mã Ưu Đãi</th>
                     <th class="px-4 py-3 text-left">Giảm giá</th>
-                    <th class="px-4 py-3 text-left">Điều kiện</th>
+                    <th class="px-4 py-3 text-left theme-contrast !important">Điều kiện</th>
                     <th class="px-4 py-3 text-left">Thời hạn</th>
                     <th class="px-4 py-3 text-center">Sử dụng</th>
                     <th class="px-4 py-3 text-left">Trạng thái</th>
@@ -110,19 +122,19 @@
                             </td>
                             <td class="px-4 py-3">
                                 @if (item.DiscountType == "percent") {
-                                    <div class="text-gray-900 dark:text-white font-bold">@item.DiscountValue%</div>
-                                    <div class="text-[10px] text-gray-500 uppercase">Phần trăm</div>
+                                    <div class="text-gray-900 dark-green-text font-bold">@item.DiscountValue%</div>
+                                    <div class="text-[10px] text-gray-500 dark-label-muted uppercase">Phần trăm</div>
                                 } else {
-                                    <div class="text-green-500 font-bold">@(item.DiscountValue.HasValue ? item.DiscountValue.Value.ToString("N0") : "0") đ</div>
-                                    <div class="text-[10px] text-gray-500 uppercase">Tiền mặt</div>
+                                    <div class="text-green-500 dark-green-text font-bold">@(item.DiscountValue.HasValue ? item.DiscountValue.Value.ToString("N0") : "0") đ</div>
+                                    <div class="text-[10px] text-gray-500 dark-label-muted uppercase">Tiền mặt</div>
                                 }
                             </td>
-                            <td class="px-4 py-3 text-gray-900 dark:text-gray-200">
-                                <div class="font-medium">≥ @(item.MinOrderValue.HasValue ? item.MinOrderValue.Value.ToString("N0") : "0") đ</div>
+                            <td class="px-4 py-3">
+                                <div class="text-gray-900 dark-orange-text font-bold">≥ @(item.MinOrderValue.HasValue? item.MinOrderValue.Value.ToString("N0") : "0") đ</div>
                             </td>
                             <td class="px-4 py-3">
-                                <div class="text-[11px] text-gray-500">Từ: @item.StartDate?.ToString("dd/MM/yyyy")</div>
-                                <div class="text-[11px] text-gray-400 dark:text-gray-300 font-medium">Đến: @item.EndDate?.ToString("dd/MM/yyyy")</div>
+                                <div class="text-[11px] text-gray-500 dark-label-muted font-bold">Từ: @item.StartDate?.ToString("dd/MM/yyyy")</div>
+                                <div class="text-[11px] text-gray-400 dark-orange-text font-bold">Đến: @item.EndDate?.ToString("dd/MM/yyyy")</div>
                             </td>
                             <td class="px-4 py-3 text-center">
                                 <div class="text-gray-900 dark:text-white font-bold">@item.UsedCount / @item.UsageLimit</div>
