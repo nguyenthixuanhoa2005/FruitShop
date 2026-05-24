@@ -27,6 +27,10 @@ public partial class User
 
     public DateTime? DeletedAt { get; set; }
 
+    public string? ResetToken { get; set; }
+
+    public DateTime? ResetTokenExpiry { get; set; }
+
     public virtual ICollection<CouponUsage> CouponUsages { get; set; } = new List<CouponUsage>();
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();

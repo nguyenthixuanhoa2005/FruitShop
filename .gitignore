@@ -1,0 +1,24 @@
+# Sensitive configuration files
+appsettings.json
+appsettings.Development.json
+appsettings.*.json
+application.json
+.env
+.env.*
+secrets.json
+
+# Build and OS files
+[Dd]ebug/
+[Rr]elease/
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+*.log
+Thumbs.db
+.DS_Store
+
+# Node modules if any
+node_modules/

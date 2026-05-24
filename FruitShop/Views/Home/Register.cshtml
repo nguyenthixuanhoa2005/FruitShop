@@ -9,6 +9,8 @@
     <div class="login-box">
         <h2 class="login-title">Đăng Ký Tài Khoản</h2>
         
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
+
         @if (!string.IsNullOrEmpty(Model?.ErrorMessage))
         {
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -17,66 +19,55 @@
             </div>
         }
 
-        <form method="post" action="@Url.Action("Register", "Home")" id="registerForm" novalidate>
+        <form asp-action="Register" asp-controller="Home" method="post" id="registerForm" novalidate>
             <div class="mb-3">
-                <label for="fullname" class="form-label">Họ và Tên</label>
-                <input type="text" 
+                <label asp-for="FullName" class="form-label">Họ và Tên</label>
+                <input asp-for="FullName" 
                      class="form-control" 
-                     id="fullname" 
-                     name="FullName" 
                      placeholder="Nhập họ và tên"
-                     required
-                     value="@Model?.FullName">
-                <span class="text-danger">@Html.ValidationMessage("FullName")</span>
+                     required>
+                <span asp-validation-for="FullName" class="text-danger small"></span>
             </div>
 
             <div class="mb-3">
-                <label for="email" class="form-label">Email</label>
-                <input type="email" 
+                <label asp-for="Email" class="form-label">Email</label>
+                <input asp-for="Email" 
                      class="form-control" 
-                     id="email" 
-                     name="Email" 
                      placeholder="Nhập email của bạn"
-                     required
-                     value="@Model?.Email">
-                <span class="text-danger">@Html.ValidationMessage("Email")</span>
+                     required>
+                <span asp-validation-for="Email" class="text-danger small"></span>
             </div>
 
             <div class="mb-3">
-                <label for="phone" class="form-label">Số điện thoại</label>
-                <input type="tel" 
+                <label asp-for="Phone" class="form-label">Số điện thoại</label>
+                <input asp-for="Phone" 
                      class="form-control" 
-                     id="phone" 
-                     name="Phone" 
-                     placeholder="Nhập số điện thoại"
-                     value="@Model?.Phone">
-                <span class="text-danger">@Html.ValidationMessage("Phone")</span>
+                     placeholder="Nhập số điện thoại">
+                <span asp-validation-for="Phone" class="text-danger small"></span>
             </div>
 
             <div class="mb-3">
-                <label for="password" class="form-label">Mật khẩu</label>
-                <input type="password" 
+                <label asp-for="Password" class="form-label">Mật khẩu</label>
+                <input asp-for="Password" 
+                     type="password"
                      class="form-control" 
-                     id="password" 
-                     name="Password" 
                      placeholder="Nhập mật khẩu"
                      required>
                 <small class="text-muted">Mật khẩu ít nhất 6 ký tự</small>
-                <span class="text-danger">@Html.ValidationMessage("Password")</span>
+                <span asp-validation-for="Password" class="text-danger small"></span>
             </div>
 
             <div class="mb-3">
-                <label for="confirmPassword" class="form-label">Xác Nhận Mật Khẩu</label>
-                <input type="password" 
+                <label asp-for="ConfirmPassword" class="form-label">Xác Nhận Mật Khẩu</label>
+                <input asp-for="ConfirmPassword" 
+                     type="password"
                      class="form-control" 
-                     id="confirmPassword" 
-                     name="ConfirmPassword" 
                      placeholder="Nhập lại mật khẩu"
                      required>
-                <span class="text-danger">@Html.ValidationMessage("ConfirmPassword")</span>
+                <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
             </div>
 
-            <button type="submit" class="btn btn-login w-100">Đăng Ký</button>
+            <button type="submit" class="btn btn-login w-100" id="btnRegister">Đăng Ký</button>
 
             <div class="login-footer">
                 <p>Đã có tài khoản? <a href="@Url.Action("Login", "Home")">Đăng nhập ngay</a></p>
@@ -84,6 +75,23 @@
         </form>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('registerForm');
+            const btn = document.getElementById('btnRegister');
+
+            form.addEventListener('submit', function() {
+                if ($(form).valid()) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang xử lý...';
+                }
+            });
+        });
+    </script>
+}
 
 <style>
     .login-container {

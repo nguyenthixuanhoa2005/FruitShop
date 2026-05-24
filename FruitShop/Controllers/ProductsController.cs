@@ -18,15 +18,16 @@ namespace FruitShop.Controllers
                _searchService = searchService;
           }
 
-          public async Task<IActionResult> Index(int? categoryId, string? sort, int page = 1, int pageSize = 12, int? minPrice = null, int? maxPrice = null, string? origin = null, string? search = null, int? relatedTo = null)
+          public async Task<IActionResult> Index([FromQuery] int[] categoryIds, [FromQuery] string[] priceRanges, [FromQuery] string[] origins, string? sort, string? search, int? relatedTo, int page = 1)
           {
-               var allCategories = await _context.Categories.ToListAsync();
+               int pageSize = 12;
+               var allCategories = await _context.Categories.Where(c => c.Status == 1).ToListAsync();
 
                var query = _context.Products
                     .Include(p => p.Category)
                     .Include(p => p.ProductImages)
                     .Include(p => p.Reviews)
-                    .AsQueryable();
+                    .Where(p => p.Status == 1);
 
                if (relatedTo.HasValue)
                {
@@ -39,7 +40,6 @@ namespace FruitShop.Controllers
                          var baseOrigin = baseProduct.Origin?.Trim();
                          query = query.Where(p =>
                               p.Id != baseProduct.Id &&
-                              p.Status == 1 &&
                               p.StockQuantity > 0 &&
                               (
                                    (baseProduct.CategoryId.HasValue && p.CategoryId == baseProduct.CategoryId) ||
@@ -52,7 +52,50 @@ namespace FruitShop.Controllers
                     }
                }
 
-               // Lọc theo từ khóa tìm kiếm (Ưu tiên MeiliSearch, fallback sang SQL LIKE)
+               // 1. Lọc theo Danh mục
+               if (categoryIds != null && categoryIds.Length > 0)
+               {
+                    var targetCategoryIds = new List<int>();
+                    foreach (var id in categoryIds)
+                    {
+                         AddCategoryAndChildren(id, allCategories, targetCategoryIds);
+                    }
+                    var distinctTargetIds = targetCategoryIds.Distinct().ToList();
+                    query = query.Where(p => p.CategoryId.HasValue && distinctTargetIds.Contains(p.CategoryId.Value));
+               }
+
+               // 2. Lọc theo Giá
+               if (priceRanges != null && priceRanges.Length > 0)
+               {
+                    var priceFilterIds = new List<int>();
+                    bool appliedPriceFilter = false;
+
+                    foreach (var range in priceRanges)
+                    {
+                         var parts = range.Split('-');
+                         if (parts.Length == 2 && decimal.TryParse(parts[0], out decimal min) && decimal.TryParse(parts[1], out decimal max))
+                         {
+                              appliedPriceFilter = true;
+                              // Lọc trên tập dữ liệu hiện tại
+                              var matchIds = await query.Where(p => p.FinalPrice >= min && p.FinalPrice <= max).Select(p => p.Id).ToListAsync();
+                              priceFilterIds.AddRange(matchIds);
+                         }
+                    }
+
+                    if (appliedPriceFilter)
+                    {
+                         var distinctIds = priceFilterIds.Distinct().ToList();
+                         query = query.Where(p => distinctIds.Contains(p.Id));
+                    }
+               }
+
+               // 3. Lọc theo Xuất xứ
+               if (origins != null && origins.Length > 0)
+               {
+                    query = query.Where(p => p.Origin != null && origins.Contains(p.Origin.Trim()));
+               }
+
+               // 4. Lọc theo từ khóa tìm kiếm (Ưu tiên MeiliSearch, fallback sang SQL LIKE)
                List<int>? searchIdList = null;
                if (!string.IsNullOrWhiteSpace(search))
                {
@@ -89,50 +132,19 @@ namespace FruitShop.Controllers
                     }
                }
 
-               if (categoryId.HasValue)
-               {
-                    var selectedCategory = allCategories.FirstOrDefault(c => c.Id == categoryId.Value);
-                    if (selectedCategory == null)
-                    {
-                         categoryId = null;
-                    }
-               }
+               // Lấy dữ liệu cho View
+               var allOrigins = await _context.Products
+                    .Where(p => !string.IsNullOrWhiteSpace(p.Origin))
+                    .Select(p => p.Origin!.Trim())
+                    .Distinct()
+                    .OrderBy(o => o)
+                    .ToListAsync();
 
-               if (categoryId.HasValue)
-               {
-                    // Lấy category và tất cả category con
-                    var categoryIds = new List<int> { categoryId.Value };
-
-                    // Logic ánh xạ thủ công cho các danh mục Quà tặng đặc biệt (do cấu trúc DB phẳng)
-                    if (categoryId.Value == 16) // Giỏ quà trái cây
-                    {
-                         categoryIds.AddRange(new List<int> { 11, 12, 13 });
-                    }
-                    else if (categoryId.Value == 17) // Hộp quà trái cây
-                    {
-                         categoryIds.AddRange(new List<int> { 18, 19, 20 });
-                    }
-                    else
-                    {
-                         var childCategories = allCategories.Where(c => c.ParentId == categoryId.Value).Select(c => c.Id).ToList();
-                         categoryIds.AddRange(childCategories);
-                         
-                         // Lấy cả category con cấp 2
-                         foreach (var childId in childCategories)
-                         {
-                              var grandchildCategories = allCategories.Where(c => c.ParentId == childId).Select(c => c.Id).ToList();
-                              categoryIds.AddRange(grandchildCategories);
-                         }
-                    }
-
-                    query = query.Where(p => categoryIds.Contains(p.CategoryId ?? 0));
-               }
-
-               // Lấy chuỗi danh mục cha cho Breadcrumb
+               // Breadcrumb
                var breadcrumbCategories = new List<Category>();
-               if (categoryId.HasValue)
+               if (categoryIds != null && categoryIds.Length > 0)
                {
-                    var tempCat = allCategories.FirstOrDefault(c => c.Id == categoryId);
+                    var tempCat = allCategories.FirstOrDefault(c => c.Id == categoryIds[0]);
                     while (tempCat != null)
                     {
                          breadcrumbCategories.Insert(0, tempCat);
@@ -141,38 +153,14 @@ namespace FruitShop.Controllers
                }
                ViewBag.BreadcrumbCategories = breadcrumbCategories;
 
-               // Áp dụng lọc giá
-               if (minPrice.HasValue)
-               {
-                    query = query.Where(p => p.FinalPrice >= minPrice.Value);
-               }
-
-               if (maxPrice.HasValue)
-               {
-                    query = query.Where(p => p.FinalPrice <= maxPrice.Value);
-               }
-
-               // Áp dụng lọc xuất xứ
-               if (!string.IsNullOrWhiteSpace(origin))
-               {
-                    var normalizedOrigin = origin.Trim();
-                    query = query.Where(p =>
-                         p.Origin != null &&
-                         EF.Functions.Like(
-                              EF.Functions.Collate(p.Origin.Trim(), "Latin1_General_100_CI_AI"),
-                              normalizedOrigin
-                         )
-                    );
-               }
-
-               // Sorting (Chỉ áp dụng các kiểu sắp xếp cụ thể, nếu không thì dùng Ranking của MeiliSearch hoặc mặc định)
+               // Sorting
                if (string.IsNullOrWhiteSpace(sort))
                {
                     if (searchIdList != null && searchIdList.Any())
                     {
-                         // Nếu đang tìm kiếm, tạm thời không áp dụng OrderBy ở SQL để giữ nguyên thứ tự MeiliSearch Ranking
+                         // Giữ thứ tự MeiliSearch Ranking
                     }
-                    else if (!categoryId.HasValue)
+                    else if (categoryIds == null || categoryIds.Length == 0)
                     {
                          var randomSeed = HttpContext.Session.GetInt32(AllProductsSeedSessionKey);
                          if (!randomSeed.HasValue)
@@ -189,12 +177,13 @@ namespace FruitShop.Controllers
                }
                else
                {
-                    switch (sort)
+                    query = sort switch
                     {
-                         case "price_asc": query = query.OrderBy(p => p.FinalPrice); break;
-                         case "price_desc": query = query.OrderByDescending(p => p.FinalPrice); break;
-                         case "name": query = query.OrderBy(p => p.Name); break;
-                    }
+                         "price_asc" => query.OrderBy(p => p.FinalPrice),
+                         "price_desc" => query.OrderByDescending(p => p.FinalPrice),
+                         "name" => query.OrderBy(p => p.Name),
+                         _ => query.OrderByDescending(p => p.Id)
+                    };
                }
 
                var products = await query.ToListAsync();
@@ -205,49 +194,61 @@ namespace FruitShop.Controllers
                     products = products.OrderBy(p => searchIdList.IndexOf(p.Id)).ToList();
                }
 
-               var totalCount = products.Count;
-               var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+               int totalItems = products.Count;
+               int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+               var pagedProducts = products.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
-               var pagedProducts = products
-                    .Skip((page - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToList();
+               ViewBag.CurrentCategoryIds = categoryIds ?? new int[0];
+               ViewBag.CurrentPriceRanges = priceRanges ?? new string[0];
+               ViewBag.CurrentOrigins = origins ?? new string[0];
+               ViewBag.Sort = sort;
+               ViewBag.Search = search;
+               ViewBag.Origins = allOrigins;
+               ViewBag.AllCategories = allCategories;
+               ViewBag.Categories = allCategories.Where(c => c.ParentId == null).ToList();
+               ViewBag.CurrentPage = page;
+               ViewBag.TotalPages = totalPages;
+               ViewBag.RelatedTo = relatedTo;
 
-               var categories = await _context.Categories
-                    .Where(c => c.Status == 1)
-                    .ToListAsync();
-
-               var allOrigins = await _context.Products
-                    .Where(p => !string.IsNullOrWhiteSpace(p.Origin))
-                    .Select(p => p.Origin!.Trim())
-                    .Distinct()
-                    .OrderBy(o => o)
-                    .ToListAsync();
-
-               string categoryName = ViewBag.CategoryName as string ?? "Tất cả sản phẩm";
-               if (!relatedTo.HasValue && categoryId.HasValue)
+               // Tính toán Tiêu đề (CategoryName)
+               if (ViewBag.CategoryName == null) // Nếu chưa được set bởi logic RelatedTo
                {
-                    var currentCat = categories.FirstOrDefault(c => c.Id == categoryId);
-                    if (currentCat != null)
+                    if (categoryIds != null && categoryIds.Length == 1)
                     {
-                         categoryName = currentCat.Name ?? "Sản phẩm";
+                         ViewBag.CategoryName = allCategories.FirstOrDefault(c => c.Id == categoryIds[0])?.Name ?? "Sản phẩm";
+                    }
+                    else if (categoryIds != null && categoryIds.Length > 1)
+                    {
+                         ViewBag.CategoryName = "Kết quả lọc";
+                    }
+                    else
+                    {
+                         ViewBag.CategoryName = "Tất cả sản phẩm";
                     }
                }
 
-               ViewBag.CategoryName = categoryName;
-               ViewBag.CurrentCategory = categoryId;
-               ViewBag.CurrentPage = page;
-               ViewBag.TotalPages = totalPages;
-               ViewBag.Categories = categories.Where(c => c.ParentId == null).ToList();
-               ViewBag.MinPrice = minPrice;
-               ViewBag.MaxPrice = maxPrice;
-               ViewBag.Origin = origin;
-               ViewBag.Origins = allOrigins;
-               ViewBag.Sort = sort;
-               ViewBag.Search = search;
-               ViewBag.RelatedTo = relatedTo;
+               if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+               {
+                    return PartialView("_ProductGridPartial", pagedProducts);
+               }
 
-               return View("Index", pagedProducts);
+               return View(pagedProducts);
+          }
+
+          private void AddCategoryAndChildren(int parentId, List<Category> allCategories, List<int> result)
+          {
+               if (!result.Contains(parentId)) result.Add(parentId);
+
+               var children = allCategories.Where(c => c.ParentId == parentId).Select(c => c.Id).ToList();
+
+               // Logic ánh xạ thủ công cho các danh mục Quà tặng đặc biệt (do cấu trúc DB phẳng)
+               if (parentId == 16) children.AddRange(new[] { 11, 12, 13 });
+               if (parentId == 17) children.AddRange(new[] { 18, 19, 20 });
+
+               foreach (var childId in children.Distinct())
+               {
+                    AddCategoryAndChildren(childId, allCategories, result);
+               }
           }
 
           public async Task<IActionResult> Details(int? id)

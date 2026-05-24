@@ -1,0 +1,65 @@
+@model FruitShop.Models.User
+@{
+    ViewData["Title"] = "Chỉnh sửa hồ sơ";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container py-5">
+    <div class="row g-4">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="text-center mb-4">
+                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
+                        @(Model.FullName?.Substring(0, 1) ?? "U")
+                    </div>
+                    <h5 class="fw-bold mb-0">@Model.FullName</h5>
+                    <p class="text-muted small">@Model.Email</p>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a asp-action="Index" class="list-group-item list-group-item-action border-0 py-3 rounded-3 mb-2">
+                        <i class="fas fa-user me-2"></i>Thông tin cá nhân
+                    </a>
+                    <a asp-action="EditProfile" class="list-group-item list-group-item-action border-0 py-3 active rounded-3 mb-2">
+                        <i class="fas fa-user-edit me-2"></i>Chỉnh sửa hồ sơ
+                    </a>
+                    <a asp-action="ChangePassword" class="list-group-item list-group-item-action border-0 py-3 rounded-3 mb-2">
+                        <i class="fas fa-key me-2"></i>Đổi mật khẩu
+                    </a>
+                    <a asp-controller="Orders" asp-action="Index" class="list-group-item list-group-item-action border-0 py-3 rounded-3">
+                        <i class="fas fa-shopping-bag me-2"></i>Đơn hàng của tôi
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <h4 class="fw-bold mb-4">Chỉnh sửa hồ sơ</h4>
+                
+                <form asp-action="EditProfile" method="post">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold small text-muted">Họ và Tên</label>
+                            <input asp-for="FullName" class="form-control rounded-3" placeholder="Nhập họ và tên">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold small text-muted">Email (Không thể thay đổi)</label>
+                            <input asp-for="Email" class="form-control rounded-3 bg-light" readonly>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold small text-muted">Số điện thoại</label>
+                            <input asp-for="Phone" class="form-control rounded-3" placeholder="Nhập số điện thoại">
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-top d-flex gap-2">
+                        <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold">Lưu thay đổi</button>
+                        <a asp-action="Index" class="btn btn-light rounded-pill px-4 fw-bold">Hủy bỏ</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
