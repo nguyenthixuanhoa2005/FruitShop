@@ -350,7 +350,10 @@
         let loginRedirectTimeout = null;
 
         // Hiển thị thông báo vàng góc phải và tự chuyển sang trang đăng nhập.
-        function showLoginRequiredModal(message, redirectUrl = '/Home/Login') {
+        function showLoginRequiredModal(message) {
+            const currentUrl = encodeURIComponent(window.location.pathname + window.location.search);
+            const redirectUrl = `/Home/Login?returnUrl=${currentUrl}`;
+
             let toastContainer = document.getElementById('loginRequiredToastContainer');
             if (!toastContainer) {
                 toastContainer = document.createElement('div');
@@ -383,7 +386,7 @@
 
             loginRedirectTimeout = setTimeout(() => {
                 window.location.href = redirectUrl;
-            }, 1600);
+            }, 1000);
         }
 
         // Cập nhật số lượng giỏ hàng trên badge

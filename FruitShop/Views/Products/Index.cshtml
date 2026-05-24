@@ -1,7 +1,9 @@
 @model List<FruitShop.Models.Product>
 @{
     ViewData["Title"] = "Danh sách sản phẩm";
-    var currentCategoryId = ViewBag.CurrentCategory as int?;
+    var currentCategoryIds = ViewBag.CurrentCategoryIds as int[] ?? new int[0];
+    var currentPriceRanges = ViewBag.CurrentPriceRanges as string[] ?? new string[0];
+    var currentOrigins = ViewBag.CurrentOrigins as string[] ?? new string[0];
     var origins = ViewBag.Origins as List<string> ?? new List<string>();
 }
 
@@ -23,8 +25,8 @@
                     }
                     else
                     {
-                        <li class="breadcrumb-item"><a asp-action="Index" asp-route-categoryId="@cat.Id" class="text-decoration-none text-muted" style="font-size: 1.0rem;">@cat.Name</a></li>
-                    }
+                        <li class="breadcrumb-item"><a href="javascript:void(0)" onclick="toggleRootSelection(@cat.Id)" class="text-decoration-none text-muted" style="font-size: 1.0rem;">@cat.Name</a></li>
+                    }   
                 }
             }
             else
@@ -37,239 +39,154 @@
     <div class="row">
         <!-- Sidebar Filter -->
         <div class="col-lg-3">
-            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
-                <h5 class="fw-bold mb-4">Danh mục</h5>
-                <div class="form-check mb-2">
-                    <input class="form-check-input category-filter" type="radio" name="categoryFilter" id="categoryAll" data-category-id="" onchange="applyCategoryFilter()">
-                    <label class="form-check-label text-muted" for="categoryAll">Tất cả sản phẩm</label>
+            <!-- Danh mục -->
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                    <h5 class="fw-bold mb-0">Danh mục</h5>
                 </div>
-                @foreach (var cat in ViewBag.Categories as List<FruitShop.Models.Category>)
-                {
-                    <div class="form-check mb-2">
-                        <input class="form-check-input category-filter" type="radio" name="categoryFilter" id="category_@cat.Id" data-category-id="@cat.Id" onchange="applyCategoryFilter()">
-                        <label class="form-check-label text-muted" for="category_@cat.Id">@cat.Name</label>
+                <div class="card-body p-3">
+                    <div class="category-menu">
+                        <!-- Tất cả sản phẩm -->
+                        <div class="category-group mb-1">
+                            <a href="javascript:void(0)" onclick="clearAllFilters()" class="category-all-link fw-bold @(currentCategoryIds.Length == 0 && currentPriceRanges.Length == 0 && currentOrigins.Length == 0 ? "active" : "")">
+                                Tất cả sản phẩm
+                            </a>
+                        </div>
+
+                        @{
+                            var allCats = ViewBag.AllCategories as List<FruitShop.Models.Category>;
+                            var rootCats = ViewBag.Categories as List<FruitShop.Models.Category>;
+                        }
+
+                        @foreach (var root in rootCats)
+                        {
+                            var hasChildren = allCats.Any(c => c.ParentId == root.Id);
+                            var isRootActive = currentCategoryIds.Contains(root.Id);
+                            
+                            // Kiểm tra xem có danh mục con nào đang được chọn không
+                            bool IsAnyChildActive(int parentId) {
+                                var children = allCats.Where(c => c.ParentId == parentId).ToList();
+                                foreach(var child in children) {
+                                    if (currentCategoryIds.Contains(child.Id) || IsAnyChildActive(child.Id)) return true;
+                                }
+                                return false;
+                            }
+                            var isParentOfChecked = IsAnyChildActive(root.Id);
+                            
+                            <div class="category-group mb-1">
+                                <div class="category-root-box @(isRootActive ? "active" : "")" onclick="toggleRootSelection(@root.Id)">
+                                    <input type="checkbox" class="cat-checkbox-item d-none" value="@root.Id" id="cat_@root.Id" @(isRootActive ? "checked" : "")>
+                                    <span class="category-root-name flex-grow-1 fw-bold">@root.Name</span>
+                                    @if (hasChildren)
+                                    {
+                                        <span class="category-toggle-icon" data-bs-toggle="collapse" data-bs-target="#collapse_@root.Id" onclick="event.stopPropagation()">
+                                            <i class="fas fa-chevron-down"></i>
+                                        </span>
+                                    }
+                                </div>
+
+                                @if (hasChildren)
+                                {
+                                    <div class="collapse @(isRootActive || isParentOfChecked ? "show" : "")" id="collapse_@root.Id">
+                                        <div class="category-sub-list ps-3 mt-1">
+                                            @{
+                                                var children = allCats.Where(c => c.ParentId == root.Id).ToList();
+                                                // Nếu là Quà tặng (3), chỉ hiện Giỏ quà (16) và Hộp quà (17) ở cấp này
+                                                if (root.Id == 3) {
+                                                    children = children.Where(c => c.Id == 16 || c.Id == 17).ToList();
+                                                }
+                                            }
+
+                                            @foreach (var child in children)
+                                            {
+                                                var isChildChecked = currentCategoryIds.Contains(child.Id);
+                                                var hasGrand = allCats.Any(c => c.ParentId == child.Id) || child.Id == 16 || child.Id == 17;
+                                                var isParentOfGrandChecked = IsAnyChildActive(child.Id);
+
+                                                <div class="category-sub-group mb-1">
+                                                    <div class="d-flex align-items-center category-item-wrap">
+                                                        <div class="form-check custom-checkbox flex-grow-1 m-0">
+                                                            <input class="form-check-input cat-checkbox-item child-check" type="checkbox" value="@child.Id" id="cat_@child.Id" @(isChildChecked ? "checked" : "") onchange="applyFilters(true)">
+                                                            <label class="form-check-label text-muted small fw-semibold w-100" for="cat_@child.Id">
+                                                                @child.Name
+                                                            </label>
+                                                        </div>
+                                                        @if (hasGrand)
+                                                        {
+                                                            <span class="category-toggle-icon small" data-bs-toggle="collapse" data-bs-target="#collapse_sub_@child.Id">
+                                                                <i class="fas fa-chevron-down"></i>
+                                                            </span>
+                                                        }
+                                                    </div>
+
+                                                    @if (hasGrand)
+                                                    {
+                                                        <div class="collapse @(isChildChecked || isParentOfGrandChecked ? "show" : "")" id="collapse_sub_@child.Id">
+                                                            <div class="category-grand-list ps-3 mt-1">
+                                                                @{
+                                                                    var grandchildren = allCats.Where(c => c.ParentId == child.Id).ToList();
+                                                                    // Ép các danh mục con vào đúng cha theo yêu cầu
+                                                                    if (child.Id == 16) grandchildren = allCats.Where(c => new[] { 11, 12, 13 }.Contains(c.Id)).ToList();
+                                                                    if (child.Id == 17) grandchildren = allCats.Where(c => new[] { 18, 19, 20 }.Contains(c.Id)).ToList();
+                                                                }
+
+                                                                @foreach (var grand in grandchildren)
+                                                                {
+                                                                    <div class="form-check custom-checkbox mb-1">
+                                                                        <input class="form-check-input cat-checkbox-item child-check" type="checkbox" value="@grand.Id" id="cat_@grand.Id" @(currentCategoryIds.Contains(grand.Id) ? "checked" : "") onchange="applyFilters(true)">
+                                                                        <label class="form-check-label text-muted extra-small w-100" for="cat_@grand.Id">
+                                                                            @grand.Name
+                                                                        </label>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
                     </div>
-                }
+                </div>
             </div>
 
+            <!-- Lọc theo giá -->
             <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
-                <h5 class="fw-bold mb-4">Lọc theo giá</h5>
-                <div class="form-check mb-2">
-                    <input class="form-check-input price-filter" type="radio" name="priceFilter" id="priceAll" data-min="" data-max="" onchange="applyPriceFilter()">
-                    <label class="form-check-label text-muted" for="priceAll">Tất cả mức giá</label>
-                </div>
-                <div class="form-check mb-2">
-                    <input class="form-check-input price-filter" type="radio" name="priceFilter" id="price1" data-min="0" data-max="100000" onchange="applyPriceFilter()">
+                <h5 class="fw-bold mb-4">Mức giá</h5>
+                <div class="form-check custom-checkbox mb-2">
+                    <input class="form-check-input price-checkbox" type="checkbox" value="0-100000" id="price1" @(currentPriceRanges.Contains("0-100000") ? "checked" : "") onchange="applyFilters(false)">
                     <label class="form-check-label text-muted" for="price1">Dưới 100.000đ</label>
                 </div>
-                <div class="form-check mb-2">
-                    <input class="form-check-input price-filter" type="radio" name="priceFilter" id="price2" data-min="100000" data-max="500000" onchange="applyPriceFilter()">
+                <div class="form-check custom-checkbox mb-2">
+                    <input class="form-check-input price-checkbox" type="checkbox" value="100000-500000" id="price2" @(currentPriceRanges.Contains("100000-500000") ? "checked" : "") onchange="applyFilters(false)">
                     <label class="form-check-label text-muted" for="price2">100.000đ - 500.000đ</label>
                 </div>
-                <div class="form-check">
-                    <input class="form-check-input price-filter" type="radio" name="priceFilter" id="price3" data-min="500000" data-max="999999999" onchange="applyPriceFilter()">
+                <div class="form-check custom-checkbox">
+                    <input class="form-check-input price-checkbox" type="checkbox" value="500000-999999999" id="price3" @(currentPriceRanges.Contains("500000-999999999") ? "checked" : "") onchange="applyFilters(false)">
                     <label class="form-check-label text-muted" for="price3">Trên 500.000đ</label>
                 </div>
             </div>
 
+            <!-- Xuất xứ -->
             <div class="card border-0 shadow-sm rounded-4 p-4">
                 <h5 class="fw-bold mb-4">Xuất xứ</h5>
-                <div class="form-check mb-2">
-                    <input class="form-check-input origin-filter" type="radio" name="originFilter" id="originAll" data-origin="" onchange="applyOriginFilter()">
-                    <label class="form-check-label text-muted" for="originAll">Tất cả xuất xứ</label>
-                </div>
                 @foreach (var origin in origins)
                 {
-                    var originId = "origin_" + System.Guid.NewGuid().ToString().Substring(0, 8);
-                    <div class="form-check mb-2">
-                        <input class="form-check-input origin-filter" type="radio" name="originFilter" id="@originId" data-origin="@origin" onchange="applyOriginFilter()">
+                    var originId = "origin_" + Math.Abs(origin.GetHashCode());
+                    <div class="form-check custom-checkbox mb-2">
+                        <input class="form-check-input origin-checkbox" type="checkbox" value="@origin" id="@originId" @(currentOrigins.Contains(origin) ? "checked" : "") onchange="applyFilters(false)">
                         <label class="form-check-label text-muted" for="@originId">@origin</label>
                     </div>
                 }
             </div>
         </div>
 
-        <!-- Product Grid -->
-        <div class="col-lg-9">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="fw-bold mb-0">@ViewBag.CategoryName</h4>
-                <select class="form-select border-0 shadow-sm rounded-3" style="width: auto;" onchange="sortProducts(this.value)">
-                    <option value="">Sắp xếp mặc định</option>
-                    <option value="price_asc">Giá thấp đến cao</option>
-                    <option value="price_desc">Giá cao đến thấp</option>
-                    <option value="name">Tên (A-Z)</option>
-                </select>
-            </div>
-
-            <div class="row g-4">
-                @if (Model.Count > 0)
-                {
-                    @foreach (var product in Model)
-                    {
-                        var productImageUrl = product.ProductImages.FirstOrDefault(pi => pi.IsMain == 1)?.ImageUrl 
-                                            ?? product.ProductImages.FirstOrDefault()?.ImageUrl 
-                                            ?? "https://via.placeholder.com/300x300?text=" + product.Name;
-                        var approvedReviews = product.Reviews?.Where(r => r.Status == 1 && r.Rating.HasValue).ToList() ?? new List<FruitShop.Models.Review>();
-                        var reviewCount = approvedReviews.Count;
-                        var averageRating = reviewCount > 0 ? approvedReviews.Average(r => r.Rating!.Value) : 0;
-                        var fullStars = (int)Math.Floor(averageRating);
-                        var hasHalfStar = averageRating - fullStars >= 0.5;
-
-                        <div class="col-6 col-md-4">
-                            <div class="card h-100 border-0 shadow-sm product-card">
-                                <a asp-action="Details" asp-route-id="@product.Id" class="text-decoration-none text-dark">
-                                    <div class="position-relative overflow-hidden product-image-wrap">
-                                        <img src="@productImageUrl" class="card-img-top p-3 product-image" alt="@product.Name" style="aspect-ratio: 1/1; object-fit: contain;">
-                                        @if (product.DiscountPercent > 0)
-                                        {
-                                            <span class="product-discount-badge">
-                                                -@Math.Round(product.DiscountPercent.Value)%
-                                            </span>
-                                        }
-                                    </div>
-                                    <div class="card-body text-center pt-0 product-body">
-                                        <p class="text-muted small mb-1">@product.Origin</p>
-                                        <h6 class="card-title fw-bold mb-2 product-title">@product.Name</h6>
-                                        <div class="product-rating mb-2">
-                                            @if (reviewCount > 0)
-                                            {
-                                                <div class="rating-stars" aria-label="@averageRating.ToString("0.0") trên 5 sao">
-                                                    @for (int s = 1; s <= 5; s++)
-                                                    {
-                                                        if (s <= fullStars) { <span class="star star-full">&#9733;</span> }
-                                                        else if (s == fullStars + 1 && hasHalfStar) { <span class="star star-half">&#9733;</span> }
-                                                        else { <span class="star star-empty">&#9734;</span> }
-                                                    }
-                                                </div>
-                                                <span class="rating-text">@averageRating.ToString("0.0")</span>
-                                            }
-                                            else { <span class="rating-text text-muted">Chưa có đánh giá</span> }
-                                        </div>
-                                        <div class="mb-3 product-price">
-                                            @if (product.DiscountPercent > 0)
-                                            {
-                                                <span class="text-success fw-bold">@product.FinalPrice?.ToString("N0") đ</span>
-                                                <span class="text-muted text-decoration-line-through small ms-2">@product.Price?.ToString("N0") đ</span>
-                                            }
-                                            else { <span class="text-success fw-bold">@product.Price?.ToString("N0") đ</span> }
-                                        </div>
-                                    </div>
-                                </a>
-                                <div class="card-body pt-0 px-3 pb-3">
-                                    <div class="d-flex justify-content-center align-items-center gap-2">
-                                        <button class="btn btn-outline-success btn-sm rounded-circle flex-shrink-0" type="button" onclick="decreaseQuantity(this)" onmousedown="event.preventDefault(); event.stopPropagation();">
-                                            <i class="fas fa-minus"></i>
-                                        </button>
-                                        <input type="number" class="form-control form-control-sm text-center product-quantity flex-shrink-0" value="1" min="1" style="width: 50px;" onmousedown="event.preventDefault(); event.stopPropagation();">
-                                        <button class="btn btn-outline-success btn-sm rounded-circle flex-shrink-0" type="button" onclick="increaseQuantity(this)" onmousedown="event.preventDefault(); event.stopPropagation();">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                        <button class="btn btn-success rounded-pill fw-bold px-3 py-2 btn-sm flex-grow-1" type="button" onclick="addToCart(@product.Id, '@product.Name', this)">
-                                            <i class="fas fa-shopping-cart me-2"></i>Thêm
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                }
-                else
-                {
-                    <div class="col-12 text-center py-5">
-                        <i class="fas fa-search text-muted fs-1 mb-3"></i>
-                        <p class="text-muted">Không tìm thấy sản phẩm nào trong danh mục này.</p>
-                    </div>
-                }
-            </div>
-            <!-- Pagination -->
-            @if (ViewBag.TotalPages > 1)
-            {
-                var currentPage = (int)ViewBag.CurrentPage;
-                var totalPages = (int)ViewBag.TotalPages;
-                const int pageWindowSize = 5;
-                var startPage = Math.Max(1, currentPage - 2);
-                var endPage = Math.Min(totalPages, currentPage + 2);
-
-                // Giữ đủ 5 trang trong cửa sổ khi gần biên đầu/cuối.
-                if (endPage - startPage + 1 < pageWindowSize)
-                {
-                    if (startPage == 1)
-                    {
-                        endPage = Math.Min(totalPages, startPage + pageWindowSize - 1);
-                    }
-                    else if (endPage == totalPages)
-                    {
-                        startPage = Math.Max(1, endPage - pageWindowSize + 1);
-                    }
-                }
-                <nav class="mt-5" aria-label="Phân trang sản phẩm">
-                    <div class="pagination-shell">
-                        <ul class="pagination pagination-modern mb-0 justify-content-center align-items-center flex-wrap gap-1">
-                        @if (startPage > 1)
-                        {
-                            <li class="page-item">
-                                <a class="page-link nav-btn" asp-action="Index" asp-route-categoryId="@currentCategoryId" asp-route-page="@(currentPage - 1)" asp-route-minPrice="@ViewBag.MinPrice" asp-route-maxPrice="@ViewBag.MaxPrice" asp-route-origin="@ViewBag.Origin" asp-route-sort="@ViewBag.Sort" asp-route-search="@ViewBag.Search" asp-route-relatedTo="@ViewBag.RelatedTo" aria-label="Lùi trang">
-                                    &lt;&lt;
-                                </a>
-                            </li>
-                        }
-
-                        @for (int p = startPage; p <= endPage; p++)
-                        {
-                            <li class="page-item @(p == currentPage ? "active" : "")">
-                                <a class="page-link" asp-action="Index" asp-route-categoryId="@currentCategoryId" asp-route-page="@p" asp-route-minPrice="@ViewBag.MinPrice" asp-route-maxPrice="@ViewBag.MaxPrice" asp-route-origin="@ViewBag.Origin" asp-route-sort="@ViewBag.Sort" asp-route-search="@ViewBag.Search" asp-route-relatedTo="@ViewBag.RelatedTo">@p</a>
-                            </li>
-                        }
-
-                        @if (currentPage < totalPages)
-                        {
-                            <li class="page-item">
-                                <a class="page-link nav-btn" asp-action="Index" asp-route-categoryId="@currentCategoryId" asp-route-page="@(currentPage + 1)" asp-route-minPrice="@ViewBag.MinPrice" asp-route-maxPrice="@ViewBag.MaxPrice" asp-route-origin="@ViewBag.Origin" asp-route-sort="@ViewBag.Sort" asp-route-search="@ViewBag.Search" asp-route-relatedTo="@ViewBag.RelatedTo" aria-label="Trang sau">
-                                    &gt;&gt;
-                                </a>
-                            </li>
-                        }
-                        </ul>
-
-                        <form asp-action="Index" method="get" class="goto-form" aria-label="Đi tới trang">
-                            @if (currentCategoryId.HasValue)
-                            {
-                                <input type="hidden" name="categoryId" value="@currentCategoryId" />
-                            }
-                            @if (ViewBag.MinPrice != null)
-                            {
-                                <input type="hidden" name="minPrice" value="@ViewBag.MinPrice" />
-                            }
-                            @if (ViewBag.MaxPrice != null)
-                            {
-                                <input type="hidden" name="maxPrice" value="@ViewBag.MaxPrice" />
-                            }
-                            @if (ViewBag.Origin != null)
-                            {
-                                <input type="hidden" name="origin" value="@ViewBag.Origin" />
-                            }
-                            @if (ViewBag.Sort != null)
-                            {
-                                <input type="hidden" name="sort" value="@ViewBag.Sort" />
-                            }
-                            @if (ViewBag.Search != null)
-                            {
-                                <input type="hidden" name="search" value="@ViewBag.Search" />
-                            }
-                            @if (ViewBag.RelatedTo != null)
-                            {
-                                <input type="hidden" name="relatedTo" value="@ViewBag.RelatedTo" />
-                            }
-
-                            <div class="goto-box">
-                                <span class="goto-label">ĐI TỚI</span>
-                                <input class="goto-input" type="number" name="page" min="1" max="@totalPages" value="@currentPage" onchange="this.form.submit()" aria-label="Số trang" />
-                                <span class="goto-total">/@totalPages</span>
-                            </div>
-                        </form>
-                    </div>
-                </nav>
-            }
+        <!-- Product Grid Container -->
+        <div class="col-lg-9" id="product-list-target">
+            <partial name="_ProductGridPartial" model="Model" />
         </div>
     </div>
 </div>
@@ -293,805 +210,193 @@
     </div>
 </div>
 
-<style>
-    .product-card { transition: all 0.3s ease; border-radius: 15px; }
-    .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; }
-    .product-image-wrap { background: #f9fff5; height: 220px; display: flex; align-items: center; justify-content: center; }
-    .product-image { max-height: 100%; object-fit: contain; }
-    .product-title { min-height: 40px; font-size: 0.95rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .product-discount-badge { position: absolute; top: 0; left: 0; background: #2fa95b; color: #fff; font-size: 0.7rem; font-weight: 700; padding: 5px 10px; border-radius: 0 0 10px 0; }
-    .star { font-size: 0.9rem; }
-    .star-full { color: #f2b01e; }
-    .star-empty { color: #d6d6d6; }
-    .pagination-shell {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 14px;
-        flex-wrap: wrap;
-    }
-
-    .pagination-modern {
-        gap: 6px;
-    }
-
-    .pagination-modern .page-item {
-        margin: 0;
-    }
-
-    .pagination-modern .page-link {
-        min-width: 42px;
-        height: 40px;
-        border: 1px solid #d6e7d8;
-        border-radius: 10px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        color: #1f5136;
-        background: #ffffff;
-        box-shadow: 0 3px 10px rgba(16, 24, 40, 0.06);
-        transition: all 0.18s ease;
-        padding: 0 12px;
-    }
-
-    .pagination-modern .page-link:hover {
-        color: #14532d;
-        border-color: #9dc7a8;
-        background: #f3fbf5;
-    }
-
-    .pagination-modern .page-item.active .page-link {
-        color: #ffffff;
-        border-color: #198754;
-        background: linear-gradient(135deg, #2fa95b, #198754);
-        box-shadow: 0 8px 18px rgba(25, 135, 84, 0.27);
-    }
-
-    .pagination-modern .page-item.disabled .page-link {
-        color: #9ca3af;
-        border-color: #e5e7eb;
-        background: #f8fafc;
-        box-shadow: none;
-        pointer-events: none;
-    }
-
-    .pagination-modern .nav-btn {
-        min-width: 38px;
-        padding: 0 10px;
-        border-radius: 10px;
-    }
-
-    .pagination-modern .page-item:first-child .nav-btn,
-    .pagination-modern .page-item:last-child .nav-btn {
-        border-radius: 10px;
-    }
-
-    .pagination-modern .page-item:first-child .page-link,
-    .pagination-modern .page-item:last-child .page-link {
-        border-radius: 10px;
-    }
-
-    .pagination-modern .page-link-ellipsis {
-        border: none;
-        background: transparent;
-        box-shadow: none;
-        min-width: 20px;
-        color: #9aa4b2;
-        letter-spacing: 2px;
-    }
-
-    .goto-form {
-        margin: 0;
-    }
-
-    .goto-box {
-        height: 40px;
-        border: 1px solid #d6e7d8;
-        border-radius: 12px;
-        background: #ffffff;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 0 10px;
-        box-shadow: 0 3px 10px rgba(16, 24, 40, 0.05);
-    }
-
-    .goto-label {
-        text-transform: uppercase;
-        font-size: 0.73rem;
-        letter-spacing: 0.06em;
-        color: #64748b;
-        font-weight: 700;
-    }
-
-    .goto-input {
-        width: 44px;
-        border: none;
-        background: transparent;
-        text-align: center;
-        font-weight: 700;
-        color: #198754;
-        padding: 0;
-    }
-
-    .goto-input:focus {
-        outline: none;
-        color: #146c43;
-    }
-
-    .goto-total {
-        color: #64748b;
-        font-weight: 600;
-        font-size: 0.9rem;
-    }
-
-    .goto-input::-webkit-outer-spin-button,
-    .goto-input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-
-    .goto-input[type=number] {
-        -moz-appearance: textfield;
-    }
-
-    @@media (max-width: 576px) {
-        .pagination-modern .page-link {
-            min-width: 38px;
-            height: 36px;
-            border-radius: 9px;
-            font-size: 0.88rem;
-        }
-
-        .pagination-modern .nav-btn {
-            min-width: 36px;
-            padding: 0 8px;
-            border-radius: 9px;
-        }
-
-        .pagination-modern .page-item:first-child .nav-btn,
-        .pagination-modern .page-item:last-child .nav-btn {
-            border-radius: 9px;
-        }
-
-        .pagination-modern .page-item:first-child .page-link,
-        .pagination-modern .page-item:last-child .page-link {
-            border-radius: 9px;
-        }
-
-        .goto-box {
-            height: 36px;
-            border-radius: 10px;
-            padding: 0 8px;
-            gap: 6px;
-        }
-
-        .goto-label {
-            font-size: 0.68rem;
-        }
-
-        .goto-input {
-            width: 38px;
-            font-size: 0.9rem;
-        }
-    }
-    .product-quantity {
-        border: 1px solid #dee2e6;
-        border-radius: 5px;
-        height: 32px;
-        padding: 0 4px;
-        text-align: center;
-        font-weight: 600;
-        line-height: 32px;
-        -moz-appearance: textfield;
-    }
-    .product-quantity::-webkit-outer-spin-button,
-    .product-quantity::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-    .product-quantity:focus { border-color: #198754; box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.15); outline: none; }
-</style>
-
+<!-- Scripts -->
 <script>
-    let currentAddToCartDetails = null; // Variable to store details for the current add to cart action
+    let currentSort = '@ViewBag.Sort' || '';
+    let currentAddToCartDetails = null;
 
-    document.addEventListener('DOMContentLoaded', function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const minPrice = @(ViewBag.MinPrice?.ToString() ?? "null");
-        const maxPrice = @(ViewBag.MaxPrice?.ToString() ?? "null");
-        const categoryIdFromUrl = urlParams.get('categoryId');
-        const originFromUrl = urlParams.get('origin');
+    function toggleRootSelection(id) {
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        const targetCb = document.getElementById('cat_' + id);
+        if (targetCb) targetCb.checked = true;
+        applyFilters(false);
+    }
 
-        // Initialize filters
-        if (minPrice !== null && maxPrice !== null) {
-            const checkboxes = document.querySelectorAll('.price-filter');
-            checkboxes.forEach(checkbox => {
-                const min = parseInt(checkbox.getAttribute('data-min'));
-                const max = parseInt(checkbox.getAttribute('data-max'));
-                if (minPrice === min && maxPrice === max) checkbox.checked = true;
+    function applyFilters(isChildClick) {
+        if (isChildClick) {
+            document.querySelectorAll('.category-root-box').forEach(box => {
+                const cb = box.querySelector('.cat-checkbox-item');
+                if (cb) cb.checked = false;
             });
         }
-        document.querySelectorAll('.category-filter').forEach(checkbox => {
-            const categoryId = checkbox.getAttribute('data-category-id');
-            checkbox.checked = (categoryIdFromUrl ? categoryId === categoryIdFromUrl : categoryId === '');
+
+        const catIds = Array.from(document.querySelectorAll('.cat-checkbox-item:checked')).map(cb => cb.value);
+        const priceRanges = Array.from(document.querySelectorAll('.price-checkbox:checked')).map(cb => cb.value);
+        const origins = Array.from(document.querySelectorAll('.origin-checkbox:checked')).map(cb => cb.value);
+        
+        loadProducts(1, catIds, priceRanges, origins, currentSort);
+    }
+
+    function clearAllFilters() {
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        updateActiveStates();
+        loadProducts(1, [], [], [], '');
+    }
+
+    function sortProducts(value) { currentSort = value; applyFilters(false); }
+    
+    function changePage(page) {
+        const catIds = Array.from(document.querySelectorAll('.cat-checkbox-item:checked')).map(cb => cb.value);
+        const priceRanges = Array.from(document.querySelectorAll('.price-checkbox:checked')).map(cb => cb.value);
+        const origins = Array.from(document.querySelectorAll('.origin-checkbox:checked')).map(cb => cb.value);
+        loadProducts(page, catIds, priceRanges, origins, currentSort);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function loadProducts(page, catIds, priceRanges, origins, sort) {
+        const urlParams = new URLSearchParams();
+        catIds.forEach(id => urlParams.append('categoryIds', id));
+        priceRanges.forEach(pr => urlParams.append('priceRanges', pr));
+        origins.forEach(o => urlParams.append('origins', o));
+        if (sort) urlParams.append('sort', sort);
+        if (page > 1) urlParams.append('page', page);
+
+        const url = '/Products/Index?' + urlParams.toString();
+        window.history.pushState({}, '', url);
+
+        const target = document.getElementById('product-list-target');
+        target.style.opacity = '0.5';
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(res => res.text())
+        .then(html => {
+            target.innerHTML = html;
+            target.style.opacity = '1';
+            updateActiveStates();
         });
-        document.querySelectorAll('.origin-filter').forEach(checkbox => {
-            const origin = checkbox.getAttribute('data-origin');
-            checkbox.checked = (originFromUrl ? origin === originFromUrl : origin === '');
-        });
-    });
-
-    function applyPriceFilter() {
-        const clickedCheckbox = event.target;
-        const allCheckboxes = document.querySelectorAll('.price-filter');
-        
-        // Uncheck tất cả checkbox khác
-        allCheckboxes.forEach(checkbox => {
-            if (checkbox !== clickedCheckbox) {
-                checkbox.checked = false;
-            }
-        });
-        
-        // Nếu checkbox được bấm không được check, không redirect
-        if (!clickedCheckbox.checked) {
-            const urlParams = new URLSearchParams(window.location.search);
-            const categoryId = urlParams.get('categoryId');
-            const origin = urlParams.get('origin');
-            const sort = urlParams.get('sort');
-            const search = urlParams.get('search');
-            
-            let url = '/Products/Index';
-            const params = [];
-            
-            if (categoryId && categoryId !== '') params.push('categoryId=' + categoryId);
-            if (origin && origin !== '') params.push('origin=' + encodeURIComponent(origin));
-            if (sort && sort !== '') params.push('sort=' + sort);
-            if (search && search !== '') params.push('search=' + encodeURIComponent(search));
-            
-            if (params.length > 0) {
-                url += '?' + params.join('&');
-            }
-            
-            window.location.href = url;
-            return;
-        }
-        
-        // Lấy giá từ checkbox vừa bấm
-        const minPrice = clickedCheckbox.getAttribute('data-min');
-        const maxPrice = clickedCheckbox.getAttribute('data-max');
-        const urlParams = new URLSearchParams(window.location.search);
-        const categoryId = urlParams.get('categoryId');
-        const origin = urlParams.get('origin');
-        const sort = urlParams.get('sort');
-        const search = urlParams.get('search');
-        
-        let url = '/Products/Index?minPrice=' + minPrice + '&maxPrice=' + maxPrice;
-        
-        if (categoryId && categoryId !== '') {
-            url += '&categoryId=' + categoryId;
-        }
-        if (origin && origin !== '') {
-            url += '&origin=' + encodeURIComponent(origin);
-        }
-        if (sort && sort !== '') {
-            url += '&sort=' + sort;
-        }
-        if (search && search !== '') {
-            url += '&search=' + encodeURIComponent(search);
-        }
-        
-        window.location.href = url;
     }
 
-    function applyCategoryFilter() {
-        const clickedCheckbox = event.target;
-        const allCheckboxes = document.querySelectorAll('.category-filter');
-        
-        // Uncheck tất cả checkbox khác
-        allCheckboxes.forEach(checkbox => {
-            if (checkbox !== clickedCheckbox) {
-                checkbox.checked = false;
-            }
-        });
-        
-        // Lấy category ID từ checkbox vừa bấm
-        const categoryId = clickedCheckbox.getAttribute('data-category-id');
-        
-        let url = '/Products/Index';
-        const params = [];
-        
-        // Nếu checkbox được bấm và đang check, lấy categoryId. Nếu uncheck, coi như chọn "Tất cả"
-        if (clickedCheckbox.checked && categoryId) {
-            params.push('categoryId=' + categoryId);
-        }
-        
-        if (params.length > 0) {
-            url += '?' + params.join('&');
-        }
-        
-        window.location.href = url;
-    }
+    function increaseQuantity(btn) { const input = btn.parentElement.querySelector('.product-quantity'); input.value = parseInt(input.value) + 1; }
+    function decreaseQuantity(btn) { const input = btn.parentElement.querySelector('.product-quantity'); if (parseInt(input.value) > 1) input.value = parseInt(input.value) - 1; }
 
-    function applyOriginFilter() {
-        const clickedCheckbox = event.target;
-        const allCheckboxes = document.querySelectorAll('.origin-filter');
-        
-        // Uncheck tất cả checkbox khác
-        allCheckboxes.forEach(checkbox => {
-            if (checkbox !== clickedCheckbox) {
-                checkbox.checked = false;
-            }
-        });
-        
-        // Lấy origin từ checkbox vừa bấm
-        const origin = clickedCheckbox.getAttribute('data-origin');
-        const urlParams = new URLSearchParams(window.location.search);
-        const categoryId = urlParams.get('categoryId');
-        const minPrice = urlParams.get('minPrice');
-        const maxPrice = urlParams.get('maxPrice');
-        const sort = urlParams.get('sort');
-        const search = urlParams.get('search');
-        
-        let url = '/Products/Index';
-        const params = [];
-        
-        if (categoryId && categoryId !== '') params.push('categoryId=' + categoryId);
-        if (minPrice && minPrice !== '') params.push('minPrice=' + minPrice);
-        if (maxPrice && maxPrice !== '') params.push('maxPrice=' + maxPrice);
-        if (sort && sort !== '') params.push('sort=' + sort);
-        if (search && search !== '') params.push('search=' + encodeURIComponent(search));
-        
-        // Nếu checkbox được bấm và đang check, lấy origin. Nếu uncheck, coi như chọn "Tất cả"
-        if (clickedCheckbox.checked && origin) {
-            params.push('origin=' + encodeURIComponent(origin));
-        }
-        
-        if (params.length > 0) {
-            url += '?' + params.join('&');
-        }
-        
-        window.location.href = url;
-    }
-
-    function sortProducts(value) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const categoryId = urlParams.get('categoryId');
-        const minPrice = urlParams.get('minPrice');
-        const maxPrice = urlParams.get('maxPrice');
-        const origin = urlParams.get('origin');
-        const search = urlParams.get('search');
-        
-        let url = '/Products/Index';
-        const params = [];
-        
-        if (categoryId && categoryId !== '') params.push('categoryId=' + categoryId);
-        if (value) params.push('sort=' + value);
-        if (minPrice && minPrice !== '') params.push('minPrice=' + minPrice);
-        if (maxPrice && maxPrice !== '') params.push('maxPrice=' + maxPrice);
-        if (origin && origin !== '') params.push('origin=' + encodeURIComponent(origin));
-        if (search && search !== '') params.push('search=' + encodeURIComponent(search));
-        
-        if (params.length > 0) {
-            url += '?' + params.join('&');
-        }
-        
-        window.location.href = url;
-    }
-
-    function increaseQuantity(btn) {
-        const quantityInput = btn.parentElement.querySelector('.product-quantity');
-        quantityInput.value = parseInt(quantityInput.value) + 1;
-    }
-
-    function decreaseQuantity(btn) {
-        const quantityInput = btn.parentElement.querySelector('.product-quantity');
-        if (parseInt(quantityInput.value) > 1) {
-            quantityInput.value = parseInt(quantityInput.value) - 1;
-        }
-    }
-
-    // Modified addToCart to use Bootstrap Modal for confirmation
     function addToCart(productId, productName, btn) {
-        const quantityInput = btn.parentElement.querySelector('.product-quantity');
-        const quantity = parseInt(quantityInput.value) || 1;
-
-        if (!isAuthenticated) {
+        const quantity = parseInt(btn.parentElement.querySelector('.product-quantity').value) || 1;
+        if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
             localStorage.setItem('pendingCartItem', JSON.stringify({ productId, productName, quantity }));
             showLoginRequiredModal('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.');
             return;
         }
-
-        // Store details globally for modal confirmation handler
         currentAddToCartDetails = { productId, productName, quantity, btn };
-
-        // Populate modal with product name
         const modalProductNameEl = document.getElementById('modalProductName');
-        if (modalProductNameEl) {
-            modalProductNameEl.textContent = productName;
-        }
-
-        // Show the Bootstrap modal
+        if (modalProductNameEl) modalProductNameEl.textContent = productName;
         const modal = new bootstrap.Modal(document.getElementById('addToCartConfirmationModal'));
         modal.show();
     }
 
-    // Event listener for the modal's confirm button
-    document.getElementById('confirmAddToCartButton').addEventListener('click', function() {
+    document.getElementById('confirmAddToCartButton')?.addEventListener('click', function() {
         const modalElement = document.getElementById('addToCartConfirmationModal');
         const modal = bootstrap.Modal.getInstance(modalElement);
-        modal.hide(); // Hide modal first
-
-        if (!currentAddToCartDetails) return; // Should not happen
-
+        modal.hide();
+        if (!currentAddToCartDetails) return;
         const { productId, productName, quantity, btn } = currentAddToCartDetails;
-
-        console.log('Proceeding to AddToCart:', { productId, productName, quantity });
-
-        // Proceed with the fetch request now that user confirmed
-        fetch('/Cart/AddToCart', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ productId: productId, quantity: quantity })
-        })
-        .then(response => {
-            console.log('Response status:', response.status);
-            return response.json();
-        })
-        .then(data => {
-            console.log('Response data:', data);
+        fetch('/Cart/AddToCart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId, quantity }) })
+        .then(res => res.json()).then(data => {
             if (data.success) {
-                // Cập nhật badge ngay khi thêm giỏ thành công
-                const badge = document.getElementById('cartBadge');
-                if (badge && typeof data.cartCount !== 'undefined') {
-                    if (data.cartCount > 0) {
-                        badge.textContent = data.cartCount;
-                        badge.style.display = 'inline-block';
-                    } else {
-                        badge.style.display = 'none';
-                    }
-                }
-
-                // Show success notification using SweetAlert2 Toast
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Đã thêm vào giỏ hàng!',
-                    html: `<strong>${productName}</strong>  đã có trong giỏ hàng của bạn.`,
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true,
-                    didOpen: (toast) => {
-                        toast.addEventListener('mouseenter', Swal.stopTimer)
-                        toast.addEventListener('mouseleave', Swal.resumeTimer)
-                    }
-                });
-                // Reset quantity input
+                Swal.fire({ icon: 'success', title: 'Đã thêm ' + productName, toast: true, position: 'top-end', timer: 3000, showConfirmButton: false, timerProgressBar: true });
+                if (typeof updateCartCount === 'function') updateCartCount();
                 const quantityInput = btn.parentElement.querySelector('.product-quantity');
                 if(quantityInput) quantityInput.value = 1;
-
-                console.log('Giỏ hàng hiện có:', data.cartCount, 'sản phẩm');
-            } else {
-                // Handle login requirement
-                if (data.requireLogin) {
-                    localStorage.setItem('pendingCartItem', JSON.stringify({ productId, productName, quantity }));
-                    showLoginRequiredModal('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.');
-                } else {
-                    // Show error notification using SweetAlert2 Toast
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Lỗi!',
-                        text: data.message || 'Không thể thêm vào giỏ hàng',
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 3000,
-                        timerProgressBar: true,
-                        didOpen: (toast) => {
-                            toast.addEventListener('mouseenter', Swal.stopTimer)
-                            toast.addEventListener('mouseleave', Swal.resumeTimer)
-                        }
-                    });
-                }
+            } else if (data.requireLogin) {
+                 localStorage.setItem('pendingCartItem', JSON.stringify({ productId, productName, quantity }));
+                 showLoginRequiredModal('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.');
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            // Show general error notification using SweetAlert2 Toast
-            Swal.fire({
-                icon: 'error',
-                title: 'Lỗi!',
-                text: 'Có lỗi xảy ra khi thêm vào giỏ hàng',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true,
-                didOpen: (toast) => {
-                    toast.addEventListener('mouseenter', Swal.stopTimer)
-                    toast.addEventListener('mouseleave', Swal.resumeTimer)
-                }
-            });
         });
-        
-        currentAddToCartDetails = null; // Clear stored details after action
+        currentAddToCartDetails = null;
     });
 
-    // Revert showToast to use SweetAlert2 as it's preferred for toasts
-    function showToast(message, type) {
-        const iconMap = { success: 'success', warning: 'warning', error: 'error', info: 'info' };
-        Swal.fire({
-            icon: iconMap[type] || 'info',
-            title: message,
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-            didOpen: (toast) => {
-                toast.addEventListener('mouseenter', Swal.stopTimer)
-                toast.addEventListener('mouseleave', Swal.resumeTimer)
-            }
+    function updateActiveStates() {
+        document.querySelectorAll('.category-root-box').forEach(box => {
+            const cb = box.querySelector('.cat-checkbox-item');
+            if (cb && cb.checked) box.classList.add('active');
+            else box.classList.remove('active');
         });
+        const allBtn = document.querySelector('.category-all-link');
+        const anyChecked = document.querySelectorAll('input[type="checkbox"]:checked').length > 0;
+        if (!anyChecked) allBtn?.classList.add('active');
+        else allBtn?.classList.remove('active');
     }
 
     function quickBuy(productId, productName) {
         const quantity = 1;
-
-        if (!isAuthenticated) {
+        if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
             localStorage.setItem('pendingQuickBuyProduct', productId);
             localStorage.setItem('pendingQuickBuyQuantity', quantity);
             showLoginRequiredModal('Vui lòng đăng nhập để mua sản phẩm.');
             return;
         }
-
-        fetch('/Cart/AddToCart', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ productId: productId, quantity: quantity })
-        })
-        .then(response => response.json())
-        .then(data => {
+        fetch('/Cart/AddToCart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId, quantity }) })
+        .then(res => res.json()).then(data => {
             if (data.success) {
                 sessionStorage.setItem('selectedProducts', JSON.stringify([productId]));
                 window.location.href = '/Cart/Checkout?selectedItems=' + productId;
-                return;
-            }
-
-            if (data.requireLogin) {
+            } else if (data.requireLogin) {
                 localStorage.setItem('pendingQuickBuyProduct', productId);
                 localStorage.setItem('pendingQuickBuyQuantity', quantity);
                 showLoginRequiredModal('Vui lòng đăng nhập để mua sản phẩm.');
-                return;
             }
-
-            showToast(data.message || 'Không thể mua ngay lúc này', 'error');
-        })
-        .catch(error => {
-            console.error('Quick buy error:', error);
-            showToast('Có lỗi xảy ra khi mua ngay', 'error');
         });
     }
 </script>
 
-<!-- Bootstrap Modal for Add to Cart Confirmation -->
-<div class="modal fade" id="addToCartConfirmationModal" tabindex="-1" aria-labelledby="addToCartConfirmationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-        <div class="modal-header">
-            <h5 class="modal-title" id="addToCartConfirmationModalLabel">Xác nhận thêm vào giỏ hàng</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-            Bạn có muốn thêm sản phẩm <strong id="modalProductName"></strong> vào giỏ hàng không?
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
-            <button type="button" class="btn btn-primary" id="confirmAddToCartButton">Thêm vào giỏ hàng</button>
-        </div>
-        </div>
-    </div>
-</div>
-
 <style>
+    /* CSS Giao diện chung */
     .product-card { transition: all 0.3s ease; border-radius: 15px; }
     .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; }
     .product-image-wrap { background: #f9fff5; height: 220px; display: flex; align-items: center; justify-content: center; }
     .product-image { max-height: 100%; object-fit: contain; }
     .product-title { min-height: 40px; font-size: 0.95rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .product-discount-badge { position: absolute; top: 0; left: 0; background: #2fa95b; color: #fff; font-size: 0.7rem; font-weight: 700; padding: 5px 10px; border-radius: 0 0 10px 0; }
-    .star { font-size: 0.9rem; }
-    .star-full { color: #f2b01e; }
+    .star { font-size: 0.9rem; color: #f2b01e; }
     .star-empty { color: #d6d6d6; }
-    .pagination-shell {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 14px;
-        flex-wrap: wrap;
-    }
 
-    .pagination-modern {
-        gap: 6px;
+    .category-menu { display: flex; flex-direction: column; }
+    .category-all-link, .category-root-box {
+        display: flex; align-items: center; padding: 10px 15px; border-radius: 10px; text-decoration: none; color: #1f2937 !important; font-weight: 600; transition: all 0.2s ease; cursor: pointer;
     }
+    .category-all-link:hover, .category-root-box:hover { background-color: #f3f4f6; color: #1f2937 !important; }
+    .category-all-link.active, .category-root-box.active { background-color: #f0fdf4; color: #198754 !important; }
+    .category-root-name { flex-grow: 1; }
+    .category-item-wrap { padding: 6px 12px; border-radius: 8px; transition: all 0.2s ease; }
+    .category-item-wrap:hover { background-color: #f8fafc; }
+    .custom-checkbox .form-check-input { cursor: pointer; border-color: #d1d5db; }
+    .custom-checkbox .form-check-input:checked { background-color: #198754; border-color: #198754; }
+    .custom-checkbox .form-check-input:checked + .form-check-label { color: #198754 !important; font-weight: 700 !important; }
+    .category-toggle-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #9ca3af; transition: transform 0.3s ease; }
+    .category-toggle-icon:hover { color: #198754; }
+    [data-bs-toggle="collapse"][aria-expanded="true"] .category-toggle-icon i,
+    .category-toggle-icon[aria-expanded="true"] i { transform: rotate(180deg); }
+    .category-sub-list { border-left: 1px solid #e5e7eb; margin-left: 10px; }
+    .category-grand-list { border-left: 1px solid #f3f4f6; margin-left: 10px; }
+    .extra-small { font-size: 0.82rem; }
+    .product-quantity { border: 1px solid #dee2e6; border-radius: 5px; height: 32px; text-align: center; font-weight: 600; width: 50px; -moz-appearance: textfield; }
+    .product-quantity::-webkit-outer-spin-button,
+    .product-quantity::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .product-quantity:focus { border-color: #198754; outline: none; }
+    #product-list-target { transition: opacity 0.2s ease; }
 
-    .pagination-modern .page-item {
-        margin: 0;
-    }
-
+    /* Pagination CSS */
+    .pagination-shell { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+    .pagination-modern { gap: 6px; }
     .pagination-modern .page-link {
-        min-width: 42px;
-        height: 40px;
-        border: 1px solid #d6e7d8;
-        border-radius: 10px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        color: #1f5136;
-        background: #ffffff;
-        box-shadow: 0 3px 10px rgba(16, 24, 40, 0.06);
-        transition: all 0.18s ease;
-        padding: 0 12px;
+        min-width: 42px; height: 40px; border: 1px solid #d6e7d8; 
+        border-radius: 10px !important;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-weight: 700; color: #1f5136; background: #ffffff;
+        box-shadow: 0 3px 10px rgba(16, 24, 40, 0.06); transition: all 0.18s ease;
     }
-
-    .pagination-modern .page-link:hover {
-        color: #14532d;
-        border-color: #9dc7a8;
-        background: #f3fbf5;
-    }
-
     .pagination-modern .page-item.active .page-link {
-        color: #ffffff;
-        border-color: #198754;
+        color: #ffffff; border-color: #198754;
         background: linear-gradient(135deg, #2fa95b, #198754);
         box-shadow: 0 8px 18px rgba(25, 135, 84, 0.27);
     }
-
-    .pagination-modern .page-item.disabled .page-link {
-        color: #9ca3af;
-        border-color: #e5e7eb;
-        background: #f8fafc;
-        box-shadow: none;
-        pointer-events: none;
-    }
-
-    .pagination-modern .nav-btn {
-        min-width: 38px;
-        padding: 0 10px;
-        border-radius: 10px;
-    }
-
-    .pagination-modern .page-item:first-child .nav-btn,
-    .pagination-modern .page-item:last-child .nav-btn {
-        border-radius: 10px;
-    }
-
-    .pagination-modern .page-item:first-child .page-link,
-    .pagination-modern .page-item:last-child .page-link {
-        border-radius: 10px;
-    }
-
-    .pagination-modern .page-link-ellipsis {
-        border: none;
-        background: transparent;
-        box-shadow: none;
-        min-width: 20px;
-        color: #9aa4b2;
-        letter-spacing: 2px;
-    }
-
-    .goto-form {
-        margin: 0;
-    }
-
-    .goto-box {
-        height: 40px;
-        border: 1px solid #d6e7d8;
-        border-radius: 12px;
-        background: #ffffff;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 0 10px;
-        box-shadow: 0 3px 10px rgba(16, 24, 40, 0.05);
-    }
-
-    .goto-label {
-        text-transform: uppercase;
-        font-size: 0.73rem;
-        letter-spacing: 0.06em;
-        color: #64748b;
-        font-weight: 700;
-    }
-
-    .goto-input {
-        width: 44px;
-        border: none;
-        background: transparent;
-        text-align: center;
-        font-weight: 700;
-        color: #198754;
-        padding: 0;
-    }
-
-    .goto-input:focus {
-        outline: none;
-        color: #146c43;
-    }
-
-    .goto-total {
-        color: #64748b;
-        font-weight: 600;
-        font-size: 0.9rem;
-    }
-
-    .goto-input::-webkit-outer-spin-button,
-    .goto-input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-
-    .goto-input[type=number] {
-        -moz-appearance: textfield;
-    }
-
-    @@media (max-width: 576px) {
-        .pagination-modern .page-link {
-            min-width: 38px;
-            height: 36px;
-            border-radius: 9px;
-            font-size: 0.88rem;
-        }
-
-        .pagination-modern .nav-btn {
-            min-width: 36px;
-            padding: 0 8px;
-            border-radius: 9px;
-        }
-
-        .pagination-modern .page-item:first-child .nav-btn,
-        .pagination-modern .page-item:last-child .nav-btn {
-            border-radius: 9px;
-        }
-
-        .pagination-modern .page-item:first-child .page-link,
-        .pagination-modern .page-item:last-child .page-link {
-            border-radius: 9px;
-        }
-
-        .goto-box {
-            height: 36px;
-            border-radius: 10px;
-            padding: 0 8px;
-            gap: 6px;
-        }
-
-        .goto-label {
-            font-size: 0.68rem;
-        }
-
-        .goto-input {
-            width: 38px;
-            font-size: 0.9rem;
-        }
-    }
-    .product-quantity {
-        border: 1px solid #dee2e6;
-        border-radius: 5px;
-        height: 32px;
-        padding: 0 4px;
-        text-align: center;
-        font-weight: 600;
-        line-height: 32px;
-        -moz-appearance: textfield;
-    }
-    .product-quantity::-webkit-outer-spin-button,
-    .product-quantity::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-    .product-quantity:focus { border-color: #198754; box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.15); outline: none; }
 </style>

@@ -17,4 +17,6 @@ public class LoginViewModel
     public bool RememberMe { get; set; }
 
     public string? ErrorMessage { get; set; }
+
+    public string? ReturnUrl { get; set; }
 }

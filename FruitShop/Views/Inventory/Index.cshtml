@@ -438,9 +438,3 @@
         });
     </script>
 }
-ype': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value }, body: JSON.stringify({ Type: createType, Note: note, Products: selectedProducts.map(p => ({ ProductId: p.id, Quantity: p.quantity })) }) 
-                }).then(r => r.json()).then(res => { if (res.success) { showToast(res.message); setTimeout(() => location.reload(), 800); } else { this.disabled = false; this.innerText = "XÁC NHẬN LƯU PHIẾU KHO"; showToast(res.message, 'error'); } });
-            }; }
-        });
-    </script>
-}

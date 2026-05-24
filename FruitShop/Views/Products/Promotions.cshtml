@@ -1,0 +1,273 @@
+@model IEnumerable<FruitShop.Models.Product>
+@{
+    ViewData["Title"] = "Khuyến mãi Hot";
+    var coupons = ViewBag.Coupons as List<FruitShop.Models.Coupon>;
+}
+
+<style>
+    /* Voucher Hub Styles */
+    .voucher-card {
+        border: none;
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        display: flex;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        position: relative;
+        height: 110px;
+        margin-bottom: 20px;
+        border: 1px dashed #2fa95b;
+    }
+
+    .voucher-left {
+        width: 30%;
+        background: linear-gradient(135deg, #2fa95b, #198754);
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .voucher-left::after {
+        content: "";
+        position: absolute;
+        right: -10px;
+        top: 0;
+        bottom: 0;
+        width: 20px;
+        background-image: radial-gradient(circle at 10px 10px, transparent 10px, #fff 10px);
+        background-size: 20px 20px;
+    }
+
+    .voucher-right {
+        width: 70%;
+        padding: 15px 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .voucher-code {
+        font-weight: 800;
+        font-size: 1.2rem;
+        letter-spacing: 1px;
+    }
+
+    .copy-btn {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid #fff;
+        color: #fff;
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 4px;
+        margin-top: 5px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+        background: #fff;
+        color: #198754;
+    }
+
+    .bg-pastel-green {
+        background-color: #f0f9eb;
+    }
+
+    .product-card {
+        transition: all 0.3s ease;
+        border-radius: 15px;
+    }
+
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
+
+    .product-image-wrap {
+        background: #f9fff5;
+        height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .product-image {
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    .product-discount-badge {
+        position: absolute;
+        top: 0;
+        left: 0;
+        background: #dc3545;
+        color: #fff;
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 5px 12px;
+        border-radius: 0 0 15px 0;
+        z-index: 2;
+    }
+</style>
+
+<div class="bg-pastel-green py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h1 class="fw-bold text-success mb-2">Voucher Hub</h1>
+            <p class="text-muted">Săn ngay mã giảm giá cực hời để mua sắm tiết kiệm hơn!</p>
+        </div>
+
+        <div class="row g-4">
+            @if (coupons != null && coupons.Any())
+            {
+                @foreach (var coupon in coupons)
+                {
+                    <div class="col-lg-4 col-md-6">
+                        <div class="voucher-card">
+                            <div class="voucher-left">
+                                <div class="voucher-code">@coupon.Code</div>
+                                <button class="copy-btn" onclick="copyToClipboard('@coupon.Code')">SAO CHÉP</button>
+                            </div>
+                            <div class="voucher-right">
+                                <h6 class="fw-bold mb-1 text-success">Giảm @(coupon.DiscountType == "percent" ? coupon.DiscountValue + "%" : coupon.DiscountValue?.ToString("N0") + "đ")</h6>
+                                <p class="small text-muted mb-1">Cho đơn từ @coupon.MinOrderValue?.ToString("N0")đ</p>
+                                <p class="extra-small text-danger mb-0">HSD: @coupon.EndDate?.ToString("dd/MM/yyyy")</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="col-12 text-center">
+                    <p class="text-muted">Hiện tại không có mã giảm giá nào khả dụng.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold">Sản phẩm đang giảm giá</h2>
+        <div class="bg-success mx-auto" style="height: 3px; width: 60px;"></div>
+    </div>
+
+    <div class="row g-4">
+        @foreach (var product in Model)
+        {
+            var productImageUrl = product.ProductImages?.FirstOrDefault()?.ImageUrl;
+            <div class="col-6 col-lg-3">
+                <div class="card h-100 border-0 shadow-sm product-card">
+                    <div class="position-relative overflow-hidden product-image-wrap">
+                        <a asp-action="Details" asp-route-id="@product.Id" class="d-block h-100">
+                            @if (!string.IsNullOrWhiteSpace(productImageUrl))
+                            {
+                                <img src="@productImageUrl" class="card-img-top p-3 product-image" alt="@product.Name">
+                            }
+                            else
+                            {
+                                <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted">
+                                    <i class="fas fa-image"></i>
+                                </div>
+                            }
+                        </a>
+                        <span class="product-discount-badge">-@Math.Round(product.DiscountPercent ?? 0)%</span>
+                    </div>
+                    <div class="card-body text-center pt-3">
+                        <p class="text-muted small mb-1">@product.Origin</p>
+                        <a asp-action="Details" asp-route-id="@product.Id" class="text-decoration-none text-dark">
+                            <h6 class="card-title fw-bold mb-2">@product.Name</h6>
+                        </a>
+                        <div class="mb-3">
+                            <span class="text-success fw-bold fs-5">@product.FinalPrice?.ToString("N0") đ</span>
+                            <span class="text-muted text-decoration-line-through small ms-2">@product.Price?.ToString("N0") đ</span>
+                        </div>
+                        <button class="btn btn-success rounded-pill fw-bold w-100 py-2" onclick="addToCart(@product.Id, '@product.Name')">
+                            <i class="fas fa-shopping-cart me-2"></i>Thêm vào giỏ
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Pagination -->
+    @if (ViewBag.TotalPages > 1)
+    {
+        <nav class="mt-5" aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                @for (int i = 1; i <= ViewBag.TotalPages; i++)
+                {
+                    <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                        <a class="page-link" asp-action="Promotions" asp-route-page="@i">@i</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Đã sao chép mã: ' + text,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            }, function(err) {
+                console.error('Could not copy text: ', err);
+            });
+        }
+
+        function addToCart(productId, productName) {
+            if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
+                localStorage.setItem('pendingCartItem', JSON.stringify({ productId, productName, quantity: 1 }));
+                if (typeof showLoginRequiredModal === 'function') {
+                    showLoginRequiredModal('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.');
+                } else {
+                    window.location.href = '/Home/Login';
+                }
+                return;
+            }
+
+            fetch('/Cart/AddToCart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    productId: productId,
+                    quantity: 1
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Đã thêm vào giỏ hàng!',
+                        html: `<strong>${productName}</strong> đã có trong giỏ hàng.`,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                    if (typeof updateCartCount === 'function') {
+                        updateCartCount();
+                    }
+                } else if (data.requireLogin) {
+                    window.location.href = '/Home/Login';
+                }
+            });
+        }
+    </script>
+}

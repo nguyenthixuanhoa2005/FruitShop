@@ -307,6 +307,48 @@
         // Trạng thái đăng nhập toàn cục
         const isAuthenticated = @(!string.IsNullOrEmpty(ViewContext.HttpContext.Session.GetString("UserId")) ? "true" : "false");
 
+        let loginRedirectTimeout = null;
+
+        // Hiển thị thông báo vàng góc phải và tự chuyển sang trang đăng nhập.
+        function showLoginRequiredModal(message) {
+            const currentUrl = encodeURIComponent(window.location.pathname + window.location.search);
+            const redirectUrl = `/Home/Login?returnUrl=${currentUrl}`;
+
+            let toastContainer = document.getElementById('loginRequiredToastContainer');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'loginRequiredToastContainer';
+                toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+                document.body.appendChild(toastContainer);
+            }
+
+            toastContainer.innerHTML = '';
+
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                background-color: #ffc107;
+                color: #1f2937;
+                padding: 14px 18px;
+                border-radius: 8px;
+                margin-bottom: 10px;
+                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+                animation: slideIn 0.25s ease-in-out;
+                max-width: 360px;
+                font-weight: 600;
+                line-height: 1.45;
+            `;
+            toast.textContent = message || 'Vui lòng đăng nhập để tiếp tục. Hệ thống sẽ chuyển bạn đến trang đăng nhập.';
+            toastContainer.appendChild(toast);
+
+            if (loginRedirectTimeout) {
+                clearTimeout(loginRedirectTimeout);
+            }
+
+            loginRedirectTimeout = setTimeout(() => {
+                window.location.href = redirectUrl;
+            }, 1000);
+        }
+
         // Cập nhật số lượng giỏ hàng trên badge
         function updateCartCount() {
             fetch('/Cart/GetCartDebug')
@@ -327,6 +369,21 @@
         document.addEventListener('DOMContentLoaded', function() {
             updateCartCount();
             
+            // Ưu tiên xử lý mua ngay đang chờ sau khi user đăng nhập
+            const pendingQuickBuyProduct = localStorage.getItem('pendingQuickBuyProduct');
+            if (isAuthenticated && pendingQuickBuyProduct) {
+                const quickBuyProductId = parseInt(pendingQuickBuyProduct, 10);
+                const quickBuyQuantity = parseInt(localStorage.getItem('pendingQuickBuyQuantity') || '1', 10) || 1;
+
+                if (!Number.isNaN(quickBuyProductId) && quickBuyProductId > 0) {
+                    processPendingQuickBuy(quickBuyProductId, quickBuyQuantity);
+                    return;
+                }
+
+                localStorage.removeItem('pendingQuickBuyProduct');
+                localStorage.removeItem('pendingQuickBuyQuantity');
+            }
+
             // Kiểm tra nếu có sản phẩm chờ xử lý (khi user vừa login)
             const pendingItem = localStorage.getItem('pendingCartItem');
             if (pendingItem) {
@@ -346,6 +403,37 @@
             }
         });
 
+        function processPendingQuickBuy(productId, quantity) {
+            fetch('/Cart/AddToCart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    productId: productId,
+                    quantity: quantity
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    sessionStorage.setItem('selectedProducts', JSON.stringify([productId]));
+                    localStorage.removeItem('pendingQuickBuyProduct');
+                    localStorage.removeItem('pendingQuickBuyQuantity');
+                    window.location.href = '/Cart/Checkout?selectedItems=' + productId;
+                    return;
+                }
+
+                localStorage.removeItem('pendingQuickBuyProduct');
+                localStorage.removeItem('pendingQuickBuyQuantity');
+            })
+            .catch(error => {
+                console.error('Error processing pending quick buy:', error);
+                localStorage.removeItem('pendingQuickBuyProduct');
+                localStorage.removeItem('pendingQuickBuyQuantity');
+            });
+        }
+
         // Hàm tự động thêm sản phẩm vào giỏ
         function addPendingItemToCart(item) {
             fetch('/Cart/AddToCart', {
@@ -361,7 +449,22 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Chào mừng! Sản phẩm "' + item.productName + '" đã được thêm vào giỏ hàng');
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Đã thêm vào giỏ hàng!',
+                            html: `<strong>${item.productName}</strong> đã có trong giỏ hàng của bạn.`,
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true,
+                            didOpen: (toast) => {
+                                toast.addEventListener('mouseenter', Swal.stopTimer)
+                                toast.addEventListener('mouseleave', Swal.resumeTimer)
+                            }
+                        });
+                    }
                     updateCartCount();
                 }
             })
