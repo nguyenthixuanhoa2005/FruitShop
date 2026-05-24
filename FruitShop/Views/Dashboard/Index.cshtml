@@ -1,0 +1,236 @@
+@model FruitShop.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard Quản Lý Cửa Hàng Trái Cây";
+}
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    .dashboard-container { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .stat-value { font-family: 'Inter', sans-serif; font-size: 3.5rem !important; line-height: 1; letter-spacing: -0.02em; }
+    .stat-label { font-size: 32px !important; letter-spacing: 0.02em; font-weight: 900 !important; color: var(--text-muted) !important; display: block !important; margin-bottom: 12px !important; line-height: 1.2 !important; }
+    .stat-sub { font-size: 20px !important; font-weight: 700 !important; color: var(--text-muted) !important; }
+    
+    .stat-card.compact { padding: 12px !important; background-color: var(--bg-card); border: 1px solid var(--border-color); }
+    
+    .icon-box-lg { width: 80px !important; height: 80px !important; border-radius: 22px !important; display: flex; align-items: center; justify-content: center; font-size: 2.5rem !important; }
+
+    /* Custom adaptive classes */
+    .bg-theme-soft { background-color: var(--bg-input) !important; }
+    .border-theme { border-color: var(--border-color) !important; }
+    .bg-card-theme { background-color: var(--bg-card) !important; }
+    
+    /* Date picker styling */
+    #datePicker {
+        border: none;
+        background: transparent;
+        color: transparent;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: 0;
+        cursor: pointer;
+    }
+</style>
+
+<div class="dashboard-container animate-fade-in px-2">
+    <!-- Header -->
+    <div class="row mb-5 align-items-center">
+        <div class="col-md-6">
+            <h1 class="mb-1 text-contrast" style="font-size: 40px !important; font-weight: 900;">Dashboard</h1>
+            <p class="text-muted uppercase font-bold tracking-widest" style="font-size: 20px !important;">Tình hình kinh doanh thời gian thực</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <div class="stat-card d-inline-flex px-6 py-4 rounded-2xl shadow-lg border-theme bg-card-theme position-relative" style="cursor: pointer;" onclick="document.getElementById('datePicker').showPicker()">
+                <span class="fw-bold text-primary uppercase tracking-wider" style="font-size: 18px !important; padding: 0 14px; display: inline-flex; align-items: center;">
+                    <i class="bi bi-calendar3 me-3"></i> Ngày: @ViewData["DisplayDate"]
+                    <i class="bi bi-chevron-down ms-2" style="font-size: 0.8rem;"></i>
+                </span>
+                <input type="date" id="datePicker" value="@ViewData["TargetDate"]" style="position: absolute; opacity: 0; pointer-events: none; bottom: 0; right: 0;" onchange="window.location.href='/Dashboard/Index?date=' + this.value">
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Quick View -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-6 col-xl-3">
+            <div class="stat-card compact border-l-4 border-green-500 shadow-sm">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="space-y-2 p-3">
+                        <label class="stat-label uppercase" style="font-size: 20px !important;">Doanh thu</label>
+                        <div class="stat-value text-success font-black">@Model.TodayRevenue.ToString("N0") <span class="text-2xl font-medium">đ</span></div>
+                        <p class="stat-sub mt-3 mb-0">Tổng: <span class="text-main">@Model.TotalRevenue.ToString("N0")</span> đ</p>
+                    </div>
+                    <div class="icon-box-lg bg-success-soft border border-green-500/20 mt-3 me-3" style="width: 64px !important; height: 64px !important; font-size: 2rem !important;"><i class="bi bi-currency-dollar"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="stat-card compact border-l-4 border-blue-500 shadow-sm">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="space-y-2 p-3">
+                        <label class="stat-label uppercase" style="font-size: 20px !important;">Đơn hàng </label>
+                        <div class="stat-value text-primary font-black">@Model.TodayOrdersCount</div>
+                        <p class="stat-sub mt-3 mb-0">Tổng: <span class="text-main">@Model.TotalOrders</span> đơn</p>
+                    </div>
+                    <div class="icon-box-lg bg-primary-soft border border-blue-500/20 mt-3 me-3" style="width: 64px !important; height: 64px !important; font-size: 2rem !important;"><i class="bi bi-cart-plus"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="stat-card compact border-l-4 border-cyan-500 shadow-sm">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="space-y-2 p-3" >
+                        <label class="stat-label uppercase" style="font-size: 20px !important;">Khách mới</label>
+                        <div class="stat-value text-info font-black">@Model.TodayNewUsers</div>
+                        <p class="stat-sub mt-3 mb-0">Tổng: <span class="text-main">@Model.TotalUsers</span> khách</p>
+                    </div>
+                    <div class="icon-box-lg bg-info-soft border border-cyan-500/20 mt-3 me-3" style="width: 64px !important; height: 64px !important; font-size: 2rem !important;"><i class="bi bi-person-plus"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="stat-card compact border-l-4 border-red-500 shadow-sm">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="space-y-2 p-3">
+                        <label class="stat-label uppercase" style="font-size: 20px !important;">Sắp hết hàng</label>
+                        <div class="stat-value text-red-500 font-black">@Model.LowStockProducts.Count</div>
+                        <p class="stat-sub mt-3 mb-0 text-danger font-bold uppercase tracking-tighter" style="font-size: 20px !important;">Cần nhập thêm hàng</p>
+                    </div>
+                    <div class="icon-box-lg bg-danger-soft border border-red-500/20 mt-3 me-3" style="width: 64px !important; height: 64px !important; font-size: 2rem !important;"><i class="bi bi-exclamation-triangle"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="premium-card h-100 p-0 overflow-hidden shadow-sm">
+                <div class="card-head p-4 border-bottom bg-theme-soft"><h5 class="mb-0 text-contrast font-bold" style="font-size: 20px !important;">Trạng thái đơn hàng</h5></div>
+                <div class="p-6 text-center">
+                    <div style="height: 380px; padding: 15px 0; box-sizing: border-box;"><canvas id="statusChart"></canvas></div>
+                    <div class="mt-8 d-flex flex-wrap justify-content-center gap-3">
+                        @{
+                            var statusNames = new Dictionary<int, string> { {0, "Chờ duyệt"}, {1, "Đã duyệt"}, {2, "Đang giao"}, {3, "Hoàn thành"}, {4, "Đã nhận"}, {5, "Đã hủy"} };
+                        }
+                        @foreach(var status in Model.OrderStatusSummary) {
+                            <span class="px-3 py-1 rounded-xl text-main font-bold border border-theme bg-theme-soft" style="font-size: 20px !important; box-shadow: inset 0 0 0 1px var(--border-color);">
+                                @(statusNames.ContainsKey(status.Key) ? statusNames[status.Key] : "Khác"): <span class="text-primary ml-1">@status.Value</span>
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="premium-card h-100 p-0 overflow-hidden shadow-sm">
+                <div class="card-head p-4 border-bottom d-flex justify-content-between align-items-center bg-theme-soft">
+                    <h4 class="mb-0 text-contrast font-bold" style="font-size: 20px !important; margin-left: 0.5rem;">Sản phẩm bán chạy</h4>
+                    <a asp-controller="Statistics" asp-action="Index" class="text-primary font-bold text-decoration-none uppercase tracking-widest" style="font-size: 24px !important;">Chi tiết <i class="bi bi-arrow-right ms-1"></i></a>
+                </div>
+                <div class="p-0">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0" style="--bs-table-cell-padding-y: 3px; --bs-table-cell-padding-x: 8px;">
+                            <thead>
+                                <tr>
+                                    <th class="ps-6 py-4 px-3 label-caps" style="padding-left: 12px;">Sản phẩm hoa quả</th>
+                                    <th class="py-4 text-center px-3 label-caps">Đã bán</th>
+                                    <th class="py-4 text-end px-3 label-caps">Giá hiện tại</th>
+                                    <th class="pe-6 py-4 text-end px-3 label-caps">Tình trạng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in Model.TopSellingProducts)
+                                {
+                                    <tr class="table-row">
+                                        <td class="ps-6" style="padding-left: 12px;">
+                                            <div class="d-flex align-items-center py-3">
+                                                <div class="me-4 shadow-sm" style="width: 48px; height: 48px; border-radius: 14px; overflow: hidden; border: 1px solid var(--border-color);">
+                                                    <img src="@(string.IsNullOrEmpty(p.ImageUrl) ? "/images/no-image.png" : p.ImageUrl)" class="w-100 h-100 object-fit-cover" onerror="this.src='/Upload/slide_1_mb.png'">
+                                                </div>
+                                                <span class="font-bold text-main">@p.Name</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center font-black text-primary text-base">@p.Value</td>
+                                        <td class="text-end font-bold text-main">@p.Price?.ToString("N0") <small>đ</small></td>
+                                        <td class="pe-6 text-end">
+                                            <div class="progress d-inline-flex" style="height: 6px; width: 80px; background-color: var(--bg-input); border-radius: 10px;">
+                                                <div class="progress-bar bg-success shadow-sm" role="progressbar" style="width: 85%; border-radius: 10px;"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        function getThemeColors() {
+            const isDark = document.documentElement.classList.contains('dark-mode');
+            return {
+                text: isDark ? '#94a3b8' : '#475569',
+                grid: isDark ? 'rgba(255,255,255,0.03)' : '#f1f5f9'
+            };
+        }
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = getThemeColors().text;
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        const statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: @Json.Serialize(Model.OrderStatusSummary.Select(x => statusNames.ContainsKey(x.Key) ? statusNames[x.Key] : "Khác")),
+                datasets: [{
+                    data: @Json.Serialize(Model.OrderStatusSummary.Select(x => x.Value)),
+                    backgroundColor: ['#64748b', '#6366f1', '#3b82f6', '#10b981', '#06b6d4', '#ef4444'],
+                    borderWidth: 0, 
+                    hoverOffset: 25,
+                    spacing: 6,
+                    borderRadius: 4
+                }]
+            },
+            options: { cutout: '80%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+        window.addEventListener('themeChanged', () => { const colors = getThemeColors(); Chart.defaults.color = colors.text; statusChart.update(); });
+
+        document.getElementById('btnSyncSearch').addEventListener('click', function() {
+            const btn = this;
+            const originalContent = btn.innerHTML;
+            
+            if (confirm('Bạn có chắc chắn muốn đồng bộ lại toàn bộ dữ liệu tìm kiếm? Việc này có thể mất vài phút.')) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="bi bi-arrow-repeat animate-spin me-2"></i> Đang đồng bộ...';
+                
+                fetch('/Dashboard/SyncAll', {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                    } else {
+                        alert('Lỗi: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Đã xảy ra lỗi khi kết nối với máy chủ.');
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalContent;
+                });
+            }
+        });
+    </script>
+}

@@ -1,0 +1,83 @@
+@model List<FruitShop.Models.Order>
+
+@{
+    ViewData["Title"] = "Đơn hàng của tôi";
+}
+
+<div class="container py-5">
+     <h2 class="fw-bold mb-4">
+          <i class="fas fa-history text-success me-2"></i>Đơn hàng của tôi
+     </h2>
+
+     @if (Model != null && Model.Count > 0)
+     {
+          <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+               <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                         <thead class="table-light">
+                         <tr>
+                              <th class="fw-bold text-success">Mã đơn hàng</th>
+                              <th class="fw-bold text-success">Ngày đặt</th>
+                              <th class="fw-bold text-success">Địa chỉ giao</th>
+                              <th class="fw-bold text-success">Tổng tiền</th>
+                              <th class="fw-bold text-success">Trạng thái</th>
+                              <th class="fw-bold text-success text-center">Hành động</th>
+                         </tr>
+                         </thead>
+                         <tbody>
+                         @foreach (var order in Model)
+                         {
+                              var statusBadge = order.Status == 1 ? "badge bg-warning text-dark" :
+                                             order.Status == 2 ? "badge bg-info text-dark" :
+                                             order.Status == 3 ? "badge bg-success" :
+                                             order.Status == 4 ? "badge bg-danger" : "badge bg-danger";
+                              
+                              var statusText = order.Status == 1 ? "Chờ xác nhận" :
+                                             order.Status == 2 ? "Đang giao" :
+                                             order.Status == 3 ? "Đã giao" :
+                                             order.Status == 4 ? "Đã hủy" : "Đã hủy";
+
+                              <tr>
+                                <td class="fw-bold">ĐH-@order.CreatedAt?.ToString("yyyyMMdd")-@order.Id.ToString("D3")</td>
+                                   <td>@order.CreatedAt?.ToString("dd/MM/yyyy HH:mm")</td>
+                                   <td>@order.ReceiverAddress</td>
+                                   <td class="fw-bold text-success">@order.TotalAmount?.ToString("N0") đ</td>
+                                   <td>
+                                        <span class="@statusBadge">@statusText</span>
+                                   </td>
+                                   <td class="text-center">
+                                        <a asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-outline-success rounded-pill">
+                                             <i class="fas fa-eye me-1"></i>Xem chi tiết
+                                        </a>
+                                   </td>
+                              </tr>
+                         }
+                         </tbody>
+                    </table>
+               </div>
+          </div>
+     }
+     else
+     {
+          <div class="card border-0 shadow-sm rounded-4 p-5 text-center">
+               <i class="fas fa-inbox text-muted" style="font-size: 60px; margin-bottom: 20px;"></i>
+               <h5 class="text-muted mb-3">Bạn chưa có đơn hàng nào</h5>
+               <p class="text-muted mb-4">Hãy khám phá các sản phẩm của chúng tôi và đặt hàng ngay!</p>
+               <a asp-controller="Products" asp-action="Index" class="btn btn-success rounded-pill fw-bold px-4">
+                    <i class="fas fa-shopping-bag me-2"></i>Đi mua sắm
+               </a>
+          </div>
+     }
+</div>
+
+<style>
+     .table-hover tbody tr:hover {
+          background-color: #f9fff5;
+     }
+
+     .badge {
+          padding: 6px 12px;
+          font-weight: 500;
+     }
+</style>
+

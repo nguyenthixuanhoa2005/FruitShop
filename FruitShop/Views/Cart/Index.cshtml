@@ -1,0 +1,475 @@
+@model List<FruitShop.Models.CartItem>
+
+@{
+    ViewData["Title"] = "Giỏ hàng";
+}
+
+<div class="container py-5">
+     <h2 class="fw-bold mb-4">
+          <i class="fas fa-shopping-cart text-success me-2"></i>Giỏ hàng của bạn
+     </h2>
+
+     @if (Model != null && Model.Count > 0)
+     {
+          <div class="row">
+               <!-- Cart Items -->
+               <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm rounded-4 p-4">
+                         <table class="table table-borderless">
+                         <thead>
+                              <tr class="border-bottom">
+                                   <th class="text-center text-muted" style="width: 50px;">
+                                        <input type="checkbox" id="selectAll" class="form-check-input">
+                                   </th>
+                                   <th class="text-muted">Sản phẩm</th>
+                                   <th class="text-center text-muted">Số lượng</th>
+                                   <th class="text-end text-muted">Giá</th>
+                                   <th class="text-end text-muted">Tổng</th>
+                                   <th class="text-center"></th>
+                              </tr>
+                         </thead>
+                         <tbody>
+                              @foreach (var item in Model)
+                              {
+                                   var price = item.Product?.FinalPrice ?? 0;                                   var total = price * (item.Quantity ?? 1);
+
+                                   <tr class="border-bottom align-middle">
+                                        <td class="text-center">
+                                             <input type="checkbox" class="form-check-input product-checkbox" data-product-id="@item.ProductId" data-quantity="@item.Quantity" data-price="@price">
+                                        </td>
+                                        <td>
+                                             <div class="d-flex align-items-center gap-2">
+                                             <div class="bg-light rounded p-2" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                                  @{
+                                                       var productImageUrl = item.Product?.ProductImages?.FirstOrDefault(pi => pi.IsMain == 1)?.ImageUrl 
+                                                                           ?? item.Product?.ProductImages?.FirstOrDefault()?.ImageUrl 
+                                                                           ?? "https://via.placeholder.com/60x60?text=" + item.Product?.Name;
+                                                  }
+                                                  <img src="@productImageUrl" alt="@item.Product?.Name" style="width: 100%; height: 100%; object-fit: contain;">
+                                             </div>
+                                             <div>
+                                                  <p class="mb-1 fw-bold">@item.Product?.Name</p>
+                                                  <small class="text-muted">@item.Product?.Origin</small>
+                                             </div>
+                                             </div>
+                                        </td>
+                                        <td class="text-center">
+                                             <div class="d-flex justify-content-center align-items-center gap-1">
+                                             <button class="btn btn-sm btn-outline-success rounded-circle" 
+                                                       onclick="updateQuantity(@item.ProductId, @(item.Quantity - 1))">
+                                                  <i class="fas fa-minus"></i>
+                                             </button>
+                                             <input type="number" class="form-control form-control-sm text-center cart-quantity-input" 
+                                                       value="@item.Quantity" style="width: 50px;" readonly>
+                                             <button class="btn btn-sm btn-outline-success rounded-circle" 
+                                                       onclick="updateQuantity(@item.ProductId, @(item.Quantity + 1))">
+                                                  <i class="fas fa-plus"></i>
+                                             </button>
+                                             </div>
+                                        </td>
+                                        <td class="text-end">
+                                             @price.ToString("N0") đ
+                                        </td>
+                                        <td class="text-end fw-bold">
+                                             @total.ToString("N0") đ
+                                        </td>
+                                        <td class="text-center">
+                                             <button class="btn btn-sm btn-outline-danger rounded-circle" 
+                                                  onclick="removeFromCart(@item.ProductId)">
+                                             <i class="fas fa-trash"></i>
+                                             </button>
+                                        </td>
+                                   </tr>
+                              }
+                         </tbody>
+                         </table>
+                    </div>
+               </div>
+
+               <!-- Cart Summary -->
+               <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 sticky-top" style="top: 20px;">
+                         <h5 class="fw-bold mb-4">Tóm tắt đơn hàng</h5>
+                         <div class="d-flex justify-content-between mb-2">
+                              <span class="text-muted">Tạm tính:</span>
+                              <span class="fw-bold" id="selectedTotal">0 đ</span>
+                         </div>
+                         <div class="d-flex justify-content-between mb-2">
+                              <span class="text-muted">Phí vận chuyển:</span>
+                              <span class="fw-bold">30,000 đ</span>
+                         </div>
+                         <div class="d-flex justify-content-between mb-2">
+                              <span class="text-muted">Giảm giá:</span>
+                              <span class="fw-bold text-danger" id="indexDiscountAmount">0 đ</span>
+                         </div>
+                         <hr>
+                         <div class="d-flex justify-content-between mb-4">
+                              <span class="fw-bold">Tổng cộng:</span>
+                              <span class="fw-bold text-success fs-5" id="selectedTotalAmount">0 đ</span>
+                         </div>
+
+                         <!-- <div class="mb-3">
+                              <label class="form-label fw-bold small">Mã giảm giá</label>
+                              <div class="input-group">
+                                   <input type="text" class="form-control rounded-3" id="indexCouponCode" placeholder="Nhập mã" style="border-radius: 0.75rem 0 0 0.75rem !important;">
+                                   <button type="button" class="btn btn-outline-success rounded-3" onclick="applyIndexCoupon()" style="border-radius: 0 0.75rem 0.75rem 0 !important;">
+                                        <i class="fas fa-tag"></i>
+                                   </button>
+                              </div>
+                              <div id="indexCouponMessage" class="mt-2"></div>
+                         </div> -->
+
+                         <button id="checkoutBtn" class="btn btn-success w-100 rounded-pill fw-bold py-3 mb-2" onclick="checkout()" disabled>
+                              <i class="fas fa-credit-card me-2"></i>Thanh toán
+                         </button>
+                         <a asp-controller="Products" asp-action="Index" class="btn btn-outline-success w-100 rounded-pill fw-bold py-3">
+                              <i class="fas fa-shopping-bag me-2"></i>Tiếp tục mua sắm
+                         </a>
+                    </div>
+               </div>
+          </div>
+     }
+     else
+     {
+          <div class="card border-0 shadow-sm rounded-4 p-5 text-center">
+               <i class="fas fa-shopping-cart text-muted" style="font-size: 60px; margin-bottom: 20px;"></i>
+               <h5 class="text-muted mb-3">Giỏ hàng của bạn đang trống</h5>
+               <a asp-controller="Products" asp-action="Index" class="btn btn-success rounded-pill fw-bold px-4">
+                    <i class="fas fa-shopping-bag me-2"></i>Quay lại mua sắm
+               </a>
+          </div>
+     }
+</div>
+
+<script>
+     const SHIPPING_FEE = 30000;
+     let appliedIndexCoupon = null;
+
+     // Handle Select All checkbox
+     document.getElementById('selectAll').addEventListener('change', function(e) {
+          const checkboxes = document.querySelectorAll('.product-checkbox');
+          checkboxes.forEach(cb => cb.checked = e.target.checked);
+          updateTotal();
+     });
+
+     // Handle individual checkbox changes
+     document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+          checkbox.addEventListener('change', function() {
+               updateTotal();
+               updateSelectAllCheckbox();
+          });
+     });
+
+     function getIndexSubtotal() {
+          let total = 0;
+          const selectedItems = document.querySelectorAll('.product-checkbox:checked');
+          selectedItems.forEach(item => {
+               const quantity = parseInt(item.dataset.quantity);
+               const price = parseInt(item.dataset.price);
+               total += quantity * price;
+          });
+          return total;
+     }
+
+     function updateTotal() {
+          const subtotal = getIndexSubtotal();
+          let discount = 0;
+
+          // Calculate discount if coupon applied
+          if (appliedIndexCoupon) {
+               const coupon = appliedIndexCoupon;
+               
+               // Check minimum order value
+               if (subtotal >= (coupon.minOrderValue || 0)) {
+                    if (coupon.discountType === 'fixed') {
+                         discount = coupon.discountValue || 0;
+                    } else if (coupon.discountType === 'percent') {
+                         discount = Math.floor(subtotal * (coupon.discountValue || 0) / 100);
+                         if (coupon.maxDiscount && discount > coupon.maxDiscount) {
+                              discount = coupon.maxDiscount;
+                         }
+                    }
+               }
+          }
+
+          const total = subtotal + SHIPPING_FEE - discount;
+
+          document.getElementById('selectedTotal').textContent = subtotal.toLocaleString('vi-VN') + ' đ';
+          document.getElementById('indexDiscountAmount').textContent = discount.toLocaleString('vi-VN') + ' đ';
+          document.getElementById('selectedTotalAmount').textContent = total.toLocaleString('vi-VN') + ' đ';
+
+          // Enable/disable checkout button
+          document.getElementById('checkoutBtn').disabled = subtotal === 0;
+     }
+
+     function updateSelectAllCheckbox() {
+          const allCheckboxes = document.querySelectorAll('.product-checkbox');
+          const checkedCheckboxes = document.querySelectorAll('.product-checkbox:checked');
+          document.getElementById('selectAll').checked = allCheckboxes.length === checkedCheckboxes.length && allCheckboxes.length > 0;
+     }
+
+     function applyIndexCoupon() {
+          const couponCode = document.getElementById('indexCouponCode').value.trim().toUpperCase();
+          const messageDiv = document.getElementById('indexCouponMessage');
+          
+          if (!couponCode) {
+               messageDiv.innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-circle me-1"></i>Vui lòng nhập mã</span>';
+               appliedIndexCoupon = null;
+               updateTotal();
+               return;
+          }
+
+          // Call backend to validate coupon
+          fetch('/Cart/ValidateCoupon', {
+               method: 'POST',
+               headers: {
+                    'Content-Type': 'application/json',
+               },
+               body: JSON.stringify({
+                    couponCode: couponCode,
+                    subtotal: getIndexSubtotal()
+               })
+          })
+          .then(response => response.json())
+          .then(data => {
+               if (data.success) {
+                    appliedIndexCoupon = data.coupon;
+                    messageDiv.innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>OK! Giảm ' + data.coupon.discountDisplay + '</span>';
+                    updateTotal();
+               } else {
+                    messageDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>' + data.message + '</span>';
+                    appliedIndexCoupon = null;
+                    updateTotal();
+               }
+          })
+          .catch(error => {
+               console.error('Error:', error);
+               messageDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Lỗi</span>';
+               appliedIndexCoupon = null;
+               updateTotal();
+          });
+     }
+
+     function checkout() {
+          const selectedItems = [];
+          document.querySelectorAll('.product-checkbox:checked').forEach(item => {
+               selectedItems.push(parseInt(item.dataset.productId));
+          });
+
+          if (selectedItems.length === 0) {
+               alert('Vui lòng chọn sản phẩm để thanh toán');
+               return;
+          }
+
+          // Store selected items and coupon in sessionStorage
+          sessionStorage.setItem('selectedProducts', JSON.stringify(selectedItems));
+          if (appliedIndexCoupon) {
+               sessionStorage.setItem('appliedCoupon', appliedIndexCoupon.code);
+          }
+          window.location.href = '/Cart/Checkout?selectedItems=' + selectedItems.join(',');
+     }
+
+     // Initialize total on page load
+     updateTotal();
+     updateSelectAllCheckbox();
+
+     function updateQuantity(productId, newQuantity) {
+          if (newQuantity < 1) {
+               removeFromCart(productId);
+               return;
+          }
+
+          fetch('/Cart/UpdateQuantity', {
+               method: 'POST',
+               headers: {
+                    'Content-Type': 'application/json',
+               },
+               body: JSON.stringify({
+                    productId: productId,
+                    quantity: newQuantity
+               })
+          })
+          .then(response => response.json())
+          .then(data => {
+               if (data.success) {
+                    location.reload();
+               } else {
+                    alert('Lỗi: ' + data.message);
+               }
+          });
+     }
+
+     function removeFromCart(productId) {
+          if (!window.Swal) {
+               if (!confirm('Bạn chắc chắn muốn xóa sản phẩm này?')) {
+                    return;
+               }
+
+               fetch('/Cart/RemoveFromCart', {
+                    method: 'POST',
+                    headers: {
+                         'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                         productId: productId
+                    })
+               })
+               .then(response => response.json())
+               .then(data => {
+                    if (data.success) {
+                         location.reload();
+                    } else {
+                         alert('Lỗi: ' + data.message);
+                    }
+               });
+               return;
+          }
+
+          Swal.fire({
+               icon: 'warning',
+               title: 'Xóa sản phẩm?',
+               html: 'Sản phẩm sẽ bị xóa khỏi giỏ hàng của bạn.',
+               showCancelButton: true,
+               showCloseButton: true,
+               confirmButtonText: 'Xóa ngay',
+               cancelButtonText: 'Hủy bỏ',
+               reverseButtons: true,
+               focusCancel: true,
+               customClass: {
+                    popup: 'cart-delete-popup',
+                    title: 'cart-delete-title',
+                    htmlContainer: 'cart-delete-message',
+                    closeButton: 'cart-delete-close-btn',
+                    confirmButton: 'cart-delete-confirm-btn',
+                    cancelButton: 'cart-delete-cancel-btn'
+               }
+          }).then((result) => {
+               if (!result.isConfirmed) {
+                    return;
+               }
+
+               fetch('/Cart/RemoveFromCart', {
+                    method: 'POST',
+                    headers: {
+                         'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                         productId: productId
+                    })
+               })
+               .then(response => response.json())
+               .then(data => {
+                    if (data.success) {
+                         Swal.fire({
+                              icon: 'success',
+                              title: 'Đã xóa sản phẩm',
+                              toast: true,
+                              position: 'top-end',
+                              showConfirmButton: false,
+                              timer: 1200,
+                              timerProgressBar: true
+                         });
+
+                         setTimeout(() => {
+                              location.reload();
+                         }, 900);
+                    } else {
+                         Swal.fire({
+                              icon: 'error',
+                              title: 'Không thể xóa',
+                              html: data.message || 'Đã có lỗi xảy ra, vui lòng thử lại.'
+                         });
+                    }
+               })
+               .catch(() => {
+                    Swal.fire({
+                         icon: 'error',
+                         title: 'Không thể xóa',
+                         html: 'Mất kết nối đến máy chủ, vui lòng thử lại.'
+                    });
+               });
+          });
+     }
+</script>
+
+<style>
+     .cart-quantity-input {
+          height: 32px !important;
+          padding: 0 !important;
+          line-height: 32px !important;
+          text-align: center !important;
+          font-weight: 600;
+          font-size: 0.95rem;
+          -moz-appearance: textfield;
+     }
+
+     .cart-quantity-input::-webkit-outer-spin-button,
+     .cart-quantity-input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+     }
+
+     .cart-delete-popup {
+          border-radius: 18px;
+          box-shadow: 0 18px 40px rgba(17, 28, 13, 0.2);
+          padding: 0.9rem 1rem 1.05rem;
+     }
+
+     .cart-delete-title {
+          font-size: 1.45rem !important;
+          font-weight: 800 !important;
+          color: #1f2d19 !important;
+     }
+
+     .cart-delete-message {
+          font-size: 0.92rem !important;
+          line-height: 1.45;
+          color: #4c6144 !important;
+     }
+
+     .cart-delete-close-btn {
+          color: #74866d !important;
+          font-size: 1.45rem !important;
+          transition: color 0.2s ease;
+     }
+
+     .cart-delete-close-btn:hover {
+          color: #2f4b26 !important;
+     }
+
+     .cart-delete-confirm-btn,
+     .cart-delete-cancel-btn {
+          min-width: 120px !important;
+          height: 40px !important;
+          padding: 0 1.1rem !important;
+          box-sizing: border-box !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-size: 1rem !important;
+          line-height: 1 !important;
+          font-weight: 700 !important;
+          border-radius: 999px !important;
+     }
+
+     .cart-delete-confirm-btn {
+          background: linear-gradient(135deg, #dc3545 0%, #b91d2d 100%) !important;
+          border: none !important;
+     }
+
+     .cart-delete-cancel-btn {
+          background: #f2f5ef !important;
+          color: #2f4b26 !important;
+          border: none !important;
+          outline: none !important;
+          box-shadow: none !important;
+     }
+
+     .cart-delete-cancel-btn:focus,
+     .cart-delete-cancel-btn:focus-visible,
+     .cart-delete-cancel-btn:active {
+          border: none !important;
+          outline: none !important;
+          box-shadow: none !important;
+     }
+</style>

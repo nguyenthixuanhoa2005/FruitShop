@@ -1,0 +1,441 @@
+@model FruitShop.Models.Order
+
+@{
+    ViewData["Title"] = "Chi tiết đơn hàng";
+    var payment = ViewBag.Payment as FruitShop.Models.Payment;
+}
+
+<div class="container py-5">
+    <!-- Thông báo thành công/lỗi -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show auto-dismiss-alert" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show auto-dismiss-alert" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Order Details -->
+        <div class="col-lg-8">
+            <!-- Order Header -->
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold mb-1">Mã đơn hàng: ĐH-@Model.CreatedAt?.ToString("yyyyMMdd")-@Model.Id.ToString("D3")</h3>
+                        <small class="text-muted">Ngày đặt: @Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm")</small>
+                    </div>
+                    <div class="text-end">
+                        @{
+                            var statusBadge = Model.Status == 1 ? "badge bg-warning text-dark" :
+                                            Model.Status == 2 ? "badge bg-info text-dark" :
+                                            Model.Status == 3 ? "badge bg-success" :
+                                            Model.Status == 4 ? "badge bg-danger" : "badge bg-secondary";
+
+                            var statusText = Model.Status == 1 ? "Chờ xác nhận" :
+                                           Model.Status == 2 ? "Đang giao" :
+                                           Model.Status == 3 ? "Đã giao" :
+                                           Model.Status == 4 ? "Đã hủy" : "Không xác định";
+                        }
+                        <span class="@statusBadge" style="font-size: 1rem; padding: 8px 16px;">@statusText</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Receiver Info -->
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <h5 class="fw-bold mb-4"><i class="fas fa-map-marker-alt text-success me-2"></i>Thông tin giao hàng</h5>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Tên người nhận</label>
+                        <p class="fw-bold">@Model.ReceiverName</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Số điện thoại</label>
+                        <p class="fw-bold">@Model.ReceiverPhone</p>
+                    </div>
+                    <div class="col-12 mb-0">
+                        <label class="text-muted small">Địa chỉ giao hàng</label>
+                        <p class="fw-bold">@Model.ReceiverAddress</p>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.Note))
+                {
+                    <hr>
+                    <label class="text-muted small">Ghi chú</label>
+                    <p>@Model.Note</p>
+                }
+            </div>
+
+            <!-- Order Items -->
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <h5 class="fw-bold mb-4"><i class="fas fa-box text-success me-2"></i>Chi tiết đơn hàng</h5>
+                
+                <div class="table-responsive">
+                    <table class="table table-borderless">
+                        <thead>
+                            <tr class="border-bottom">
+                                <th class="text-muted">Sản phẩm</th>
+                                <th class="text-center text-muted">Số lượng</th>
+                                <th class="text-end text-muted">Đơn giá</th>
+                                <th class="text-end text-muted">Tổng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.OrderItems != null)
+                            {
+                                @foreach (var item in Model.OrderItems)
+                                {
+                                    var itemTotal = (item.UnitPrice ?? 0) * (item.Quantity ?? 0);
+                                    <tr class="border-bottom">
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="bg-light rounded p-1" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                                                     @{
+                                                          var productImageUrl = item.Product?.ProductImages?.FirstOrDefault(pi => pi.IsMain == 1)?.ImageUrl 
+                                                                              ?? item.Product?.ProductImages?.FirstOrDefault()?.ImageUrl 
+                                                                              ?? "https://via.placeholder.com/50x50?text=" + item.Product?.Name;
+                                                     }
+                                                     <img src="@productImageUrl" alt="@item.Product?.Name" style="width: 100%; height: 100%; object-fit: contain;">
+                                                </div>
+                                                <div>
+                                                    <p class="mb-1 fw-bold small">@item.Product?.Name</p>
+                                                    <small class="text-muted">@item.Product?.Origin</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            @item.Quantity
+                                        </td>
+                                        <td class="text-end">
+                                            @item.UnitPrice?.ToString("N0") đ
+                                        </td>
+                                        <td class="text-end fw-bold">
+                                            @itemTotal.ToString("N0") đ
+                                        </td>
+                                        @if (Model.Status == 3)
+                                        {
+                                            <td class="text-center">
+                                                @{
+                                                    var reviewedProductIds = ViewBag.ReviewedProductIds as List<int?> ?? new List<int?>();
+                                                    var isReviewed = reviewedProductIds.Contains(item.ProductId);
+                                                }
+                                                @if (isReviewed)
+                                                {
+                                                    <span class="badge bg-light text-muted rounded-pill px-3">
+                                                        <i class="fas fa-check me-1"></i>Đã đánh giá
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3" 
+                                                            onclick="openReviewModal(@item.ProductId, '@item.Product?.Name')">
+                                                        <i class="fas fa-star me-1"></i>Đánh giá
+                                                    </button>
+                                                }
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <h5 class="fw-bold mb-4"><i class="fas fa-receipt text-success me-2"></i>Tóm tắt đơn hàng</h5>
+
+                @{
+                    decimal subtotal = 0;
+                    if (Model.OrderItems != null)
+                    {
+                        subtotal = Model.OrderItems.Sum(x => ((x.UnitPrice ?? 0) * (x.Quantity ?? 0)));
+                    }
+                    const decimal SHIPPING_FEE = 30000m;
+                    decimal discount = Model.DiscountAmount ?? 0;
+                    decimal total = Model.TotalAmount ?? 0;
+                }
+
+                <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                    <span class="text-muted">Tạm tính:</span>
+                    <span class="fw-bold">@subtotal.ToString("N0") đ</span>
+                </div>
+
+                <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                    <span class="text-muted">Phí vận chuyển:</span>
+                    <span class="fw-bold">@SHIPPING_FEE.ToString("N0") đ</span>
+                </div>
+
+                @if (Model.CouponId.HasValue && discount > 0)
+                {
+                    <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                        <span class="text-muted">Mã giảm giá:</span>
+                        <span class="fw-bold text-info">@Model.Coupon?.Code</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                        <span class="text-muted">Giảm giá:</span>
+                        <span class="fw-bold text-danger">-@discount.ToString("N0") đ</span>
+                    </div>
+                }
+
+                <div class="d-flex justify-content-between mb-4">
+                    <span class="fw-bold">Tổng cộng:</span>
+                    <span class="fw-bold text-success fs-5">@total.ToString("N0") đ</span>
+                </div>
+            </div>
+
+            <!-- Payment Info -->
+            @if (payment != null)
+            {
+                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                    <h5 class="fw-bold mb-4"><i class="fas fa-credit-card text-success me-2"></i>Thông tin thanh toán</h5>
+
+                    <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                        <span class="text-muted">Phương thức:</span>
+                        <span class="fw-bold">
+                            @if (payment.Method == "COD")
+                            {
+                                <span>Tiền mặt khi nhận hàng</span>
+                            }
+                            else if (payment.Method == "BANK_TRANSFER")
+                            {
+                                <span>Chuyển khoản ngân hàng</span>
+                            }
+                            else if (payment.Method == "WALLET")
+                            {
+                                <span>Ví điện tử</span>
+                            }
+                        </span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                        <span class="text-muted">Số tiền:</span>
+                        <span class="fw-bold">@payment.Amount?.ToString("N0") đ</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Trạng thái:</span>
+                        <span class="fw-bold">
+                            @{
+                                var paymentBadge = payment.Status == 0 ? "badge bg-warning text-dark" : "badge bg-success";
+                                var paymentText = payment.Status == 0 ? "Chờ thanh toán" : "Đã thanh toán";
+                            }
+                            <span class="@paymentBadge">@paymentText</span>
+                        </span>
+                    </div>
+                </div>
+            }
+
+            <!-- Action Buttons -->
+            <div class="d-grid gap-2">
+                @if (Model.Status == 1)
+                {
+                    <button type="button" class="btn btn-danger rounded-pill fw-bold py-3 mb-2" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                        <i class="fas fa-times-circle me-2"></i>Hủy đơn hàng
+                    </button>
+                }
+                @if (Model.Status == 2)
+                {
+                    <a asp-action="ConfirmReceived" asp-route-id="@Model.Id" class="btn btn-primary rounded-pill fw-bold py-3 mb-2 shadow-sm"
+                       onclick="return confirm('Bạn xác nhận đã nhận được đầy đủ sản phẩm của đơn hàng này?')">
+                        <i class="fas fa-check-double me-2"></i>Đã nhận được hàng
+                    </a>
+                }
+                <a asp-controller="Products" asp-action="Index" class="btn btn-success rounded-pill fw-bold py-3">
+                    <i class="fas fa-shopping-bag me-2"></i>Tiếp tục mua sắm
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Xác nhận hủy đơn -->
+<div class="modal fade" id="cancelModal" tabindex="-1" style="z-index: 2000;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="fas fa-exclamation-triangle text-danger me-2"></i>Xác nhận hủy đơn hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-muted">
+                Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <a asp-action="Cancel" asp-route-id="@Model.Id" class="btn btn-danger rounded-pill">Xác nhận</a>
+                <button type="button" class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">Hủy</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Đánh giá sản phẩm -->
+<div class="modal fade" id="reviewModal" tabindex="-1" style="z-index: 2000;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 bg-success text-white rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="fas fa-star me-2"></i>Đánh giá sản phẩm</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="reviewForm">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="reviewProductId" name="ProductId">
+                    <input type="hidden" name="OrderId" value="@Model.Id">
+                    
+                    <div class="text-center mb-4">
+                        <p class="text-muted mb-2">Bạn cảm thấy sản phẩm thế nào?</p>
+                        <h6 class="fw-bold text-dark mb-3" id="reviewProductName">Tên sản phẩm</h6>
+                        
+                        <div class="rating-input d-flex justify-content-center gap-2 fs-2 text-muted">
+                            <i class="far fa-star cursor-pointer" data-rating="1"></i>
+                            <i class="far fa-star cursor-pointer" data-rating="2"></i>
+                            <i class="far fa-star cursor-pointer" data-rating="3"></i>
+                            <i class="far fa-star cursor-pointer" data-rating="4"></i>
+                            <i class="far fa-star cursor-pointer" data-rating="5"></i>
+                        </div>
+                        <input type="hidden" id="ratingValue" name="Rating" value="5">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nhận xét của bạn</label>
+                        <textarea class="form-control rounded-3" id="reviewComment" name="Comment" rows="4" maxlength="500" placeholder="Chia sẻ cảm nhận của bạn về sản phẩm này..."></textarea>
+                        <small class="text-muted d-block text-end mt-1"><span id="commentCount">0</span>/500</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold">
+                        <i class="fas fa-paper-plane me-2"></i>Gửi đánh giá
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    #cancelModal + .modal-backdrop {
+        z-index: 1990;
+    }
+
+    .badge {
+        padding: 8px 12px;
+        font-weight: 500;
+    }
+    .cursor-pointer { cursor: pointer; }
+    .rating-input .fas { color: #f2b01e; }
+    .rating-input .far:hover, .rating-input .far:hover ~ .far { color: #f2b01e; }
+</style>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.querySelectorAll('.auto-dismiss-alert').forEach(alertEl => {
+            setTimeout(() => {
+                if (!alertEl || !document.body.contains(alertEl)) {
+                    return;
+                }
+
+                if (window.bootstrap && bootstrap.Alert) {
+                    bootstrap.Alert.getOrCreateInstance(alertEl).close();
+                } else {
+                    alertEl.remove();
+                }
+            }, 3500);
+        });
+
+        function openReviewModal(productId, productName) {
+            document.getElementById('reviewProductId').value = productId;
+            document.getElementById('reviewProductName').textContent = productName;
+            
+            // Reset form
+            document.getElementById('ratingValue').value = 5;
+            document.querySelectorAll('.rating-input i').forEach((star, index) => {
+                star.classList.remove('far');
+                star.classList.add('fas');
+            });
+
+            const commentInput = document.getElementById('reviewComment');
+            const commentCount = document.getElementById('commentCount');
+            if (commentInput && commentCount) {
+                commentInput.value = '';
+                commentCount.textContent = '0';
+            }
+            
+            new bootstrap.Modal(document.getElementById('reviewModal')).show();
+        }
+
+        // Xử lý chọn sao
+        document.querySelectorAll('.rating-input i').forEach(star => {
+            star.addEventListener('click', function() {
+                const rating = this.getAttribute('data-rating');
+                document.getElementById('ratingValue').value = rating;
+                
+                document.querySelectorAll('.rating-input i').forEach((s, index) => {
+                    if (index < rating) {
+                        s.classList.remove('far');
+                        s.classList.add('fas');
+                    } else {
+                        s.classList.remove('fas');
+                        s.classList.add('far');
+                    }
+                });
+            });
+        });
+
+        const reviewComment = document.getElementById('reviewComment');
+        const commentCount = document.getElementById('commentCount');
+        if (reviewComment && commentCount) {
+            reviewComment.addEventListener('input', function() {
+                commentCount.textContent = String(this.value.length);
+            });
+        }
+
+        // Gửi đánh giá qua AJAX
+        document.getElementById('reviewForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData.entries());
+
+            fetch('/Orders/SubmitReview', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công!',
+                        text: 'Cảm ơn bạn đã đánh giá sản phẩm.',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => location.reload());
+                } else {
+                    Swal.fire('Lỗi', result.message || 'Không thể gửi đánh giá', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Lỗi', 'Không thể gửi đánh giá. Vui lòng thử lại.', 'error');
+            });
+        });
+    </script>
+}
+

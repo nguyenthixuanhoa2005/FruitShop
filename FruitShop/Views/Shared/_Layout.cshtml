@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Fruit Shop</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/FruitShop.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/chatbot.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS for Multi-level Dropdown */
+        .dropdown-submenu {
+            position: relative;
+        }
+
+        .dropdown-submenu .dropdown-menu {
+            top: 0;
+            left: 100%;
+            margin-top: -1px;
+            display: none;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f0f9eb;
+            color: #6AAE2D;
+        }
+
+        .user-account-button {
+            height: 30px;
+            justify-content: center;
+        }
+
+        .bg-pastel-green {
+            background-color: #f0f9eb;
+        }
+
+        /* Keep account dropdown above checkout sticky panels */
+        header {
+            position: relative;
+            z-index: 1100;
+        }
+
+        header .navbar {
+            position: relative;
+            z-index: 1101;
+        }
+
+        header .dropdown-menu {
+            z-index: 1200;
+        }
+
+        .dropdown-submenu {
+            z-index: 1201;
+        }
+
+        .dropdown-submenu .dropdown-menu {
+            z-index: 1202;
+        }
+
+        .user-account-dropdown .dropdown-menu {
+            z-index: 1200;
+        }
+
+        .user-account-dropdown .dropdown-item,
+        .user-account-dropdown .dropdown-item:link,
+        .user-account-dropdown .dropdown-item:visited {
+            color: #0d6efd;
+        }
+
+        .user-account-dropdown .dropdown-item:hover,
+        .user-account-dropdown .dropdown-item:focus {
+            color: #6AAE2D !important;
+        }
+
+        /* Custom Auth Buttons */
+        .btn-auth-login {
+            color: #198754;
+            border: 1.5px solid #198754;
+            background-color: rgba(255, 255, 255, 0.6);
+            transition: all 0.3s ease;
+        }
+        .btn-auth-login:hover {
+            background-color: #198754;
+            color: white !important;
+        }
+        .btn-auth-register {
+            background-color: #198754;
+            color: white !important;
+            border: 1.5px solid #198754;
+            transition: all 0.3s ease;
+        }
+        .btn-auth-register:hover {
+            background-color: transparent;
+            color: #198754 !important;
+            border: 1.5px solid #198754;
+        }
+
+        /* Toast Animation */
+        @@keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @@keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body style="font-family: 'Quicksand', sans-serif;">
+    <input type="hidden" id="session-user-id" value="@Context.Session.GetString("UserId")" />
+    <header>
+        <!-- Top Header: Logo, Search, Auth -->
+        <div class="bg-pastel-green py-3 border-bottom">
+            <div class="container">
+                <div class="row align-items-center">
+                    <!-- Logo -->
+                    <div class="col-lg-3 col-md-3">
+                        <a class="navbar-brand fw-bold text-success fs-2 d-flex align-items-center" asp-area="" asp-controller="Home" asp-action="Index">
+                            <i class="fas fa-leaf me-2"></i>Fruit Shop
+                        </a>
+                    </div>
+                    
+                    <!-- Search Bar -->
+                    <div class="col-lg-6 col-md-6">
+                        <form action="/Products/Index" method="GET" class="mx-lg-4">
+                            <div class="input-group">
+                                <input type="text" name="search" class="form-control border-success rounded-pill-start ps-4" placeholder="Tìm kiếm sản phẩm..." value="@ViewBag.Search" style="border-top-left-radius: 50px; border-bottom-left-radius: 50px; background-color: rgba(255,255,255,0.8);">
+                                <button class="btn btn-success px-4" type="submit" style="border-top-right-radius: 50px; border-bottom-right-radius: 50px;">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Cart & Auth Buttons -->
+                    <div class="col-lg-3 col-md-3 text-end">
+                        <div class="d-flex align-items-center justify-content-end gap-3">
+                            <a asp-controller="Cart" asp-action="Index" class="text-dark fs-4 position-relative me-2 text-decoration-none hover-green">
+                                <i class="fas fa-shopping-basket"></i>
+                                @{
+                                    var cartJson = Context.Session.GetString("Cart"); // Lấy dữ liệu giỏ hàng từ session
+                                    int cartCount = 0;
+                                    if (!string.IsNullOrEmpty(cartJson)) // Nếu có dữ liệu, giải mã JSON để đếm số lượng sản phẩm
+                                    {
+                                        try
+                                        {
+                                            var cart = System.Text.Json.JsonSerializer.Deserialize<Dictionary<int, int>>(cartJson) ?? new Dictionary<int, int>();
+                                            cartCount = cart.Count;
+                                        }
+                                        catch { }
+                                    }
+                                }
+                                <span id="cartBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success" style="font-size: 0.6rem; @(cartCount == 0 ? "display: none;" : "")">@cartCount</span>
+                            </a>
+                            <div class="d-flex gap-2 align-items-center">
+                                @{
+                                    var userId = Context.Session.GetString("UserId");
+                                    var userName = Context.Session.GetString("UserName");
+                                }
+                                @if (!string.IsNullOrEmpty(userId))
+                                {
+                                    <div class="nav-item dropdown user-account-dropdown">
+                                        <a class="nav-link btn btn-auth-register btn-sm px-4 rounded-pill fw-bold user-account-button" 
+                                           href="javascript:void(0)" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.85rem; display: inline-flex; align-items: center;">
+                                            <i class="fas fa-user me-2"></i>@userName
+                                        </a>
+                                        <ul class="dropdown-menu border-0 shadow" aria-labelledby="userDropdown">
+                                            <li><a class="dropdown-item py-2" href="#">Tài khoản của tôi</a></li>
+                                            <li><a class="dropdown-item py-2" asp-controller="Orders" asp-action="Index">Đơn hàng của tôi</a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item py-2" onclick="logout()" style="cursor:pointer;">Đăng xuất</a></li>
+                                        </ul>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <a asp-controller="Home" asp-action="Login" class="btn btn-auth-login btn-sm px-3 rounded-pill fw-bold" style="font-size: 0.85rem;">Đăng nhập</a>
+                                    <a asp-controller="Home" asp-action="Register" class="btn btn-auth-register btn-sm px-3 rounded-pill fw-bold shadow-sm" style="font-size: 0.85rem;">Đăng ký</a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Menu Bar -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm py-2">
+            <div class="container">
+                <button class="navbar-toggler mx-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav mx-auto">
+                        <li class="nav-item">
+                            <a class="nav-link px-4 fw-bold text-dark hover-green text-uppercase" asp-area="" asp-controller="Home" asp-action="Index" style="font-size: 1.1rem;">Trang chủ</a>
+                        </li>
+                        
+                        <!-- Hierarchical Products Menu -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle px-4 fw-bold text-dark hover-green text-uppercase" href="javascript:void(0)" id="navbarDropdownProducts" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 1.1rem;" onclick="window.location.href='/Products'"> 
+                                Sản phẩm
+                            </a> 
+                            <ul class="dropdown-menu border-0 shadow" aria-labelledby="navbarDropdownProducts">
+                                <li class="dropdown-submenu">
+                                    <a class="dropdown-item d-flex justify-content-between align-items-center py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="1">
+                                        Trái cây nhập khẩu <i class="fas fa-chevron-right ms-2" style="font-size: 0.7rem;"></i>
+                                    </a>
+                                    <ul class="dropdown-menu border-0 shadow">
+                                        <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="4">Táo nhập khẩu</a></li>
+                                        <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="5">Nho nhập khẩu</a></li>
+                                        <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="6">Cam/Quýt nhập khẩu</a></li>
+                                        <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="15">Cherry nhập khẩu</a></li>
+                                        <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="7">Lê nhập khẩu</a></li>
+                                    </ul>
+                                </li>
+                                <li class="dropdown-submenu">
+                                    <a class="dropdown-item d-flex justify-content-between align-items-center py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="2">
+                                        Trái cây nội địa <i class="fas fa-chevron-right ms-2" style="font-size: 0.7rem;"></i>
+                                    </a>
+                                    <ul class="dropdown-menu border-0 shadow">
+                                        <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="8">Đặc sản miền Tây</a></li>
+                                        <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="9">Đặc sản Đà Lạt</a></li>
+                                        <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="10">Trái cây vùng cao</a></li>
+                                        <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="14">Trái cây mùa vụ</a></li>
+                                    </ul>
+                                </li>
+                                <li class="dropdown-submenu">
+                                    <a class="dropdown-item d-flex justify-content-between align-items-center py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="3">
+                                        Quà tặng trái cây <i class="fas fa-chevron-right ms-2" style="font-size: 0.7rem;"></i>
+                                    </a>
+                                    <ul class="dropdown-menu border-0 shadow">
+                                        <li class="dropdown-submenu">
+                                            <a class="dropdown-item d-flex justify-content-between align-items-center py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="16">
+                                                Giỏ quà trái cây <i class="fas fa-chevron-right ms-2" style="font-size: 0.7rem;"></i>
+                                            </a>
+                                            <ul class="dropdown-menu border-0 shadow">
+                                                <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="11">Giỏ quà Tết</a></li>
+                                                <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="13">Giỏ quà sinh nhật</a></li>
+                                                <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="12">Giỏ quà khai trương</a></li>
+                                            </ul>
+                                        </li>
+                                        <li class="dropdown-submenu">
+                                            <a class="dropdown-item d-flex justify-content-between align-items-center py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="17">
+                                                Hộp quà trái cây <i class="fas fa-chevron-right ms-2" style="font-size: 0.7rem;"></i>
+                                            </a>
+                                            <ul class="dropdown-menu border-0 shadow">
+                                                <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="18">Hộp quà cơ bản</a></li>
+                                                <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="19">Hộp quà tiêu chuẩn</a></li>
+                                                <li><a class="dropdown-item py-2" asp-controller="Products" asp-action="Index" asp-route-categoryId="20">Hộp quà cao cấp</a></li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link px-4 fw-bold text-dark hover-green text-uppercase" href="#" style="font-size: 1.1rem;">Khuyến mãi hot</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link px-4 fw-bold text-dark hover-green text-uppercase" asp-area="" asp-controller="Home" asp-action="About" style="font-size: 1.1rem;">Về chúng tôi</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link px-4 fw-bold text-dark hover-green text-uppercase" asp-area="" asp-controller="Home" asp-action="Privacy" style="font-size: 1.1rem;">Liên hệ</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main role="main">
+        @RenderBody()
+    </main>
+
+    <footer class="bg-pastel-green border-top mt-5 py-5">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <h5 class="text-success fw-bold mb-4"><i class="fas fa-leaf me-2"></i>Fruit Shop</h5>
+                    <p class="text-muted">Chuyên cung cấp các loại trái cây nhập khẩu và nội địa tươi ngon, an toàn cho sức khỏe gia đình bạn.</p>
+                    <div class="d-flex gap-3 mt-4">
+                        <a href="#" class="btn btn-outline-success btn-sm rounded-circle"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="btn btn-outline-success btn-sm rounded-circle"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="btn btn-outline-success btn-sm rounded-circle"><i class="fab fa-tiktok"></i></a>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="fw-bold mb-4">Về chúng tôi</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none hover-green">Giới thiệu</a></li>
+                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none hover-green">Cửa hàng</a></li>
+                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none hover-green">Tuyển dụng</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="fw-bold mb-4">Hỗ trợ</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none hover-green">Chính sách đổi trả</a></li>
+                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none hover-green">Chính sách giao hàng</a></li>
+                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none hover-green">Hướng dẫn mua hàng</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <h6 class="fw-bold mb-4">Thông tin liên hệ</h6>
+                    <p class="text-muted small mb-2"><i class="fas fa-map-marker-alt me-2 text-success"></i> 123 Đường Hoa Quả, Quận Trái Cây, TP. Hà Nội</p>
+                    <p class="text-muted small mb-2"><i class="fas fa-phone-alt me-2 text-success"></i> 0123 456 789</p>
+                    <p class="text-muted small mb-2"><i class="fas fa-envelope me-2 text-success"></i> contact@fruitshop.vn</p>
+                </div>
+            </div>
+            <hr class="my-4 text-muted opacity-25">
+            <div class="text-center text-muted small">
+                &copy; 2024 - Fruit Shop - Chất lượng từ tâm
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/chatbot.js" asp-append-version="true"></script>
+    <script>
+        function logout() {
+            window.location.href = '/Home/Logout';
+        }
+
+        // Trạng thái đăng nhập toàn cục
+        const isAuthenticated = @(!string.IsNullOrEmpty(ViewContext.HttpContext.Session.GetString("UserId")) ? "true" : "false");
+
+        let loginRedirectTimeout = null;
+
+        // Hiển thị thông báo vàng góc phải và tự chuyển sang trang đăng nhập.
+        function showLoginRequiredModal(message, redirectUrl = '/Home/Login') {
+            let toastContainer = document.getElementById('loginRequiredToastContainer');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'loginRequiredToastContainer';
+                toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+                document.body.appendChild(toastContainer);
+            }
+
+            toastContainer.innerHTML = '';
+
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                background-color: #ffc107;
+                color: #1f2937;
+                padding: 14px 18px;
+                border-radius: 8px;
+                margin-bottom: 10px;
+                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+                animation: slideIn 0.25s ease-in-out;
+                max-width: 360px;
+                font-weight: 600;
+                line-height: 1.45;
+            `;
+            toast.textContent = message || 'Vui lòng đăng nhập để tiếp tục. Hệ thống sẽ chuyển bạn đến trang đăng nhập.';
+            toastContainer.appendChild(toast);
+
+            if (loginRedirectTimeout) {
+                clearTimeout(loginRedirectTimeout);
+            }
+
+            loginRedirectTimeout = setTimeout(() => {
+                window.location.href = redirectUrl;
+            }, 1600);
+        }
+
+        // Cập nhật số lượng giỏ hàng trên badge
+        function updateCartCount() {
+            fetch('/Cart/GetCartDebug', { cache: 'no-store' })
+                .then(response => response.json())
+                .then(data => {
+                    const badge = document.getElementById('cartBadge');
+                    if (data.cartCount > 0) {
+                        badge.textContent = data.cartCount;
+                        badge.style.display = 'inline-block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                })
+                .catch(error => console.error('Lỗi khi cập nhật giỏ hàng:', error));
+        }
+
+        // Gọi khi trang load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCartCount();
+
+            // Ưu tiên xử lý mua ngay đang chờ sau khi user đăng nhập
+            const pendingQuickBuyProduct = localStorage.getItem('pendingQuickBuyProduct');
+            if (isAuthenticated && pendingQuickBuyProduct) {
+                const quickBuyProductId = parseInt(pendingQuickBuyProduct, 10);
+                const quickBuyQuantity = parseInt(localStorage.getItem('pendingQuickBuyQuantity') || '1', 10) || 1;
+
+                if (!Number.isNaN(quickBuyProductId) && quickBuyProductId > 0) {
+                    processPendingQuickBuy(quickBuyProductId, quickBuyQuantity);
+                    return;
+                }
+
+                localStorage.removeItem('pendingQuickBuyProduct');
+                localStorage.removeItem('pendingQuickBuyQuantity');
+            }
+            
+            // Kiểm tra nếu có sản phẩm chờ xử lý (khi user vừa login)
+            const pendingItem = localStorage.getItem('pendingCartItem');
+            if (pendingItem) {
+                try {
+                    const item = JSON.parse(pendingItem);
+                    // Nếu ở trang sản phẩм hoặc chi tiết, tự động thêm vào giỏ
+                    if (window.location.pathname.includes('/Products')) {
+                        // Chờ 500ms để trang load xong
+                        setTimeout(() => {
+                            addPendingItemToCart(item);
+                            localStorage.removeItem('pendingCartItem');
+                        }, 500);
+                    }
+                } catch (e) {
+                    console.log('Error parsing pending item:', e);
+                }
+            }
+        });
+
+        function processPendingQuickBuy(productId, quantity) {
+            fetch('/Cart/AddToCart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    productId: productId,
+                    quantity: quantity
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    sessionStorage.setItem('selectedProducts', JSON.stringify([productId]));
+                    localStorage.removeItem('pendingQuickBuyProduct');
+                    localStorage.removeItem('pendingQuickBuyQuantity');
+                    window.location.href = '/Cart/Checkout?selectedItems=' + productId;
+                    return;
+                }
+
+                localStorage.removeItem('pendingQuickBuyProduct');
+                localStorage.removeItem('pendingQuickBuyQuantity');
+            })
+            .catch(error => {
+                console.error('Error processing pending quick buy:', error);
+                localStorage.removeItem('pendingQuickBuyProduct');
+                localStorage.removeItem('pendingQuickBuyQuantity');
+            });
+        }
+
+        // Hàm tự động thêm sản phẩm vào giỏ
+        function addPendingItemToCart(item) {
+            fetch('/Cart/AddToCart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    productId: item.productId,
+                    quantity: item.quantity
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Đã thêm vào giỏ hàng!',
+                            html: `<strong>${item.productName}</strong> đã có trong giỏ hàng của bạn.`,
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true,
+                            didOpen: (toast) => {
+                                toast.addEventListener('mouseenter', Swal.stopTimer)
+                                toast.addEventListener('mouseleave', Swal.resumeTimer)
+                            }
+                        });
+                    }
+                    updateCartCount();
+                }
+            })
+            .catch(error => console.error('Error adding pending item:', error));
+        }
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+

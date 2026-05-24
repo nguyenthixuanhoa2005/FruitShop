@@ -1,0 +1,195 @@
+@{
+    ViewData["Title"] = "Thống Kê Kinh Doanh Chi Tiết";
+}
+
+<div class="statistics-container animate-fade-in">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h2 class="fw-bold mb-1">Phân Tích & Thống Kê</h2>
+            <p class="text-secondary fw-medium mb-0">Dữ liệu chi tiết giúp bạn đưa ra quyết định kinh doanh chính xác.</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <button class="btn btn-outline-primary rounded-pill px-4 fw-bold" onclick="window.print()">
+                <i class="bi bi-printer me-2"></i>Xuất báo cáo
+            </button>
+        </div>
+    </div>
+
+    <!-- Key Performance Indicators (KPIs) -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="premium-card p-4 text-center">
+                <div class="icon-box bg-soft-primary mx-auto mb-3">
+                    <i class="bi bi-person-check fs-4"></i>
+                </div>
+                <h5 class="text-muted small fw-bold text-uppercase">Tỉ lệ quay lại</h5>
+                <h2 class="fw-extrabold mb-0">@ViewBag.ReturningRate.ToString("0.0")%</h2>
+                <p class="text-secondary small mt-2 mb-0">Khách hàng mua từ 2 lần trở lên</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="premium-card p-4 text-center">
+                <div class="icon-box bg-soft-success mx-auto mb-3">
+                    <i class="bi bi-cash-stack fs-4"></i>
+                </div>
+                <h5 class="text-muted small fw-bold text-uppercase">Giá trị đơn trung bình (AOV)</h5>
+                <h2 class="fw-extrabold mb-0">@ViewBag.AOV.ToString("N0")đ</h2>
+                <p class="text-secondary small mt-2 mb-0">Trên mỗi đơn hàng hoàn thành</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="premium-card p-4 text-center">
+                <div class="icon-box bg-soft-danger mx-auto mb-3">
+                    <i class="bi bi-cart-x fs-4"></i>
+                </div>
+                <h5 class="text-muted small fw-bold text-uppercase">Tỉ lệ hủy đơn</h5>
+                <h2 class="fw-extrabold mb-0">@ViewBag.CancellationRate.ToString("0.0")%</h2>
+                <p class="text-secondary small mt-2 mb-0">Tổng số đơn bị hủy hệ thống</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Revenue Chart -->
+        <div class="col-lg-8">
+            <div class="premium-card h-100">
+                <div class="card-head p-4 border-bottom border-strong">
+                    <h5 class="fw-bold mb-0">Biểu đồ doanh thu 12 tháng qua</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div style="height: 350px;">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Products by Revenue -->
+        <div class="col-lg-4">
+            <div class="premium-card h-100">
+                <div class="card-head p-4 border-bottom border-strong">
+                    <h5 class="fw-bold mb-0">Sản phẩm mang lại doanh thu cao</h5>
+                </div>
+                <div class="card-body p-4">
+                    @foreach(var p in ViewBag.TopProductsRevenue) {
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="fw-bold small">@p.ProductName</span>
+                                <span class="fw-bold text-success small">@p.Revenue.ToString("N0")đ</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-success" style="width: 75%"></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Top Customers Table -->
+        <div class="col-lg-12">
+            <div class="premium-card">
+                <div class="card-head p-4 border-bottom border-strong">
+                    <h5 class="fw-bold mb-0">Khách hàng tiêu biểu (Top Buyers)</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="bg-soft-light">
+                            <tr>
+                                <th class="ps-4 py-3 theme-contrast">Khách hàng</th>
+                                <th class="py-3 theme-contrast">Email</th>
+                                <th class="py-3 text-center theme-contrast">Số đơn đã đặt</th>
+                                <th class="py-3 text-end pe-4 ">Tổng chi tiêu</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in ViewBag.TopCustomers)
+                            {
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle me-3">@c.FullName.Substring(0, 1)</div>
+                                            <span class="fw-bold">@c.FullName</span>
+                                        </div>
+                                    </td>
+                                    <td>@c.Email</td>
+                                    <td class="text-center">@c.OrderCount</td>
+                                    <td class="text-end pe-4 fw-extrabold text-primary">@c.TotalSpent.ToString("N0")đ</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        function getThemeColors() {
+            const isDark = document.documentElement.classList.contains('dark-mode');
+            return {
+                text: isDark ? '#d1d5db' : '#475569',
+                grid: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9'
+            };
+        }
+
+        const revCtx = document.getElementById('revenueChart').getContext('2d');
+        const revenueChart = new Chart(revCtx, {
+            type: 'line',
+            data: {
+                labels: @Json.Serialize(ViewBag.MonthlyLabels),
+                datasets: [{
+                    label: 'Doanh thu (VND)',
+                    data: @Json.Serialize(ViewBag.MonthlyValues),
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: getThemeColors().grid },
+                        ticks: { color: getThemeColors().text, callback: (v) => v.toLocaleString() + 'đ' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: getThemeColors().text }
+                    }
+                }
+            }
+        });
+
+        window.addEventListener('themeChanged', () => {
+            const colors = getThemeColors();
+            revenueChart.options.scales.y.grid.color = colors.grid;
+            revenueChart.options.scales.y.ticks.color = colors.text;
+            revenueChart.options.scales.x.ticks.color = colors.text;
+            revenueChart.update();
+        });
+    </script>
+}
+
+<style>
+    .fw-extrabold { font-weight: 800; }
+    .bg-soft-primary { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+    .bg-soft-success { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .bg-soft-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .icon-box { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
+    .avatar-circle { width: 35px; height: 35px; background: var(--nav-active-bg); color: var(--accent-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 1px solid var(--border-strong); }
+    .border-strong { border-color: var(--border-strong) !important; }
+</style>

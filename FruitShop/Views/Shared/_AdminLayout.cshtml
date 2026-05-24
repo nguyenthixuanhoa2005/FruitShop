@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - FruitShop</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/FruitShop.styles.css" asp-append-version="true" />
+    <script>
+        // Anti-flash script: Apply theme immediately
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark-mode');
+            }
+        })();
+    </script>
+</head>
+<body>
+    <div class="mobile-header">
+        <button class="mobile-nav-toggle">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="mobile-brand">FruitShop</div>
+    </div>
+
+    <div class="sidebar-overlay"></div>
+
+    <nav id="sidebar">
+        <div class="sidebar-brand">
+            <span class="menu-text">FruitShop</span>
+            <span class="collapsed-text d-none">FS</span>
+        </div>
+
+        <div class="sidebar-menu">
+            <a class="menu-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" && ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active" : "")" 
+               asp-controller="Dashboard" asp-action="Index">
+                <i class="bi bi-speedometer2"></i>
+                <span class="menu-text">Tổng quan</span>
+            </a>
+
+            <div class="menu-item has-submenu @(ViewContext.RouteData.Values["Controller"]?.ToString() == "AdminProducts" || ViewContext.RouteData.Values["Controller"]?.ToString() == "Categories" ? "active" : "")">
+                <i class="bi bi-box-seam"></i>
+                <span class="menu-text">Sản phẩm</span>
+                <i class="bi bi-chevron-right arrow"></i>
+            </div>
+            <div class="submenu @(ViewContext.RouteData.Values["Controller"]?.ToString() == "AdminProducts" || ViewContext.RouteData.Values["Controller"]?.ToString() == "Categories" ? "open" : "")">
+                <a class="menu-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "AdminProducts" ? "active" : "")" asp-controller="AdminProducts" asp-action="Index">
+                    <i class="bi bi-list-ul"></i>
+                    <span class="menu-text">Danh sách</span>
+                </a>
+                <a class="menu-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Categories" ? "active" : "")" asp-controller="Categories" asp-action="Index">
+                    <i class="bi bi-tags"></i>
+                    <span class="menu-text">Danh mục</span>
+                </a>
+            </div>
+
+            <a class="menu-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "AdminOrders" ? "active" : "")" 
+               asp-controller="AdminOrders" asp-action="Index">
+                <i class="bi bi-cart3"></i>
+                <span class="menu-text">Đơn hàng</span>
+            </a>
+
+            <div class="menu-item has-submenu @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Suppliers" || ViewContext.RouteData.Values["Controller"]?.ToString() == "Inventory" ? "active open" : "")">
+                <i class="bi bi-box-seam"></i>
+                <span class="menu-text">Quản lý kho</span>
+                <i class="bi bi-chevron-right arrow"></i>
+            </div>
+            <div class="submenu @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Suppliers" || ViewContext.RouteData.Values["Controller"]?.ToString() == "Inventory" ? "open" : "")">
+                <a class="menu-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Suppliers" ? "active" : "")" asp-controller="Suppliers" asp-action="Index">
+                    <i class="bi bi-truck"></i>
+                    <span class="menu-text">Nhà cung cấp</span>
+                </a>
+                <a class="menu-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Inventory" ? "active" : "")" asp-controller="Inventory" asp-action="Index">
+                    <i class="bi bi-houses"></i>
+                    <span class="menu-text">Kho hàng</span>
+                </a>
+            </div>
+
+            <a class="menu-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Coupons" ? "active" : "")" 
+               asp-controller="Coupons" asp-action="Index">
+                <i class="bi bi-ticket-perforated"></i>
+                <span class="menu-text">Mã giảm giá</span>
+            </a>
+
+            <a class="menu-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Reviews" ? "active" : "")" 
+               asp-controller="Reviews" asp-action="Index">
+                <i class="bi bi-star"></i>
+                <span class="menu-text">Đánh giá</span>
+            </a>
+
+            <div class="menu-item has-submenu @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Users" ? "active open" : "")">
+                <i class="bi bi-person-badge"></i>
+                <span class="menu-text">Tài khoản</span>
+                <i class="bi bi-chevron-right arrow"></i>
+            </div>
+            <div class="submenu @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Users" ? "open" : "")">
+                <a class="menu-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Users" ? "active" : "")" asp-controller="Users" asp-action="Index">
+                    <i class="bi bi-people"></i>
+                    <span class="menu-text">Khách hàng</span>
+                </a>
+                <a class="menu-item" href="#">
+                    <i class="bi bi-person-gear"></i>
+                    <span class="menu-text">Khác</span>
+                </a>
+            </div>
+
+            <a class="menu-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Statistics" ? "active" : "")" 
+               asp-controller="Statistics" asp-action="Index">
+                <i class="bi bi-graph-up"></i>
+                <span class="menu-text">Thống kê</span>
+            </a>
+            <a class="menu-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Privacy" ? "active" : "")" 
+               asp-controller="AdminHome" asp-action="Privacy">
+                <i class="bi bi-shield-lock"></i>
+                <span class="menu-text">Bảo mật</span>
+            </a>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="user-info mb-2">
+                <div class="d-flex align-items-center px-3 py-2">
+                    <div class="avatar-sm me-2">
+                        <i class="bi bi-person-circle fs-4"></i>
+                    </div>
+                    <div class="user-details overflow-hidden">
+                        <p class="menu-text mb-0 fw-bold small">Chào, Admin</p>
+                        <p class="menu-text mb-0 text-muted extra-small">Quản trị viên</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-actions d-flex align-items-center justify-content-between px-2">
+                <a class="menu-item text-danger m-0 flex-grow-1" asp-controller="AdminHome" asp-action="Logout" title="Đăng xuất">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span class="menu-text" style="font-size: 0.85rem;">Đăng xuất</span>
+                </a>
+                <div class="toggle-btn m-0 p-0" id="toggleSidebar">
+                    <i class="bi bi-chevron-left"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="top-bar d-flex align-items-center justify-content-end px-4 py-3">
+            <div id="themeToggle" class="theme-switch-3d" title="Chuyển đổi giao diện (Alt + T)">
+                <div class="switch-track">
+                    <div class="switch-thumb">
+                        <i class="bi bi-sun-fill sun-icon"></i>
+                        <i class="bi bi-moon-stars-fill moon-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content-wrapper">
+            <main role="main">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

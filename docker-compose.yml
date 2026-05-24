@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    container_name: fruitshop_search
+    ports:
+      - "7700:7700"
+    volumes:
+      - ./meili_data:/meili_data
+    environment:
+      - MEILI_MASTER_KEY=masterKey123
+      - MEILI_ENV=development
+    restart: always

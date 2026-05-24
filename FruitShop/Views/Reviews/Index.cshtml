@@ -1,0 +1,268 @@
+@model List<FruitShop.Models.Review>
+@{
+    ViewData["Title"] = "Quản lý Đánh giá";
+    var totalReviews = ViewBag.TotalReviews ?? 0;
+    var avgRating = (double)(ViewBag.AverageRating ?? 0.0);
+}
+
+<link rel="stylesheet" href="~/css/animations.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/products.css" asp-append-version="true" />
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+@Html.AntiForgeryToken()
+
+<div class="min-h-screen pt-0 px-6 pb-20">
+    <!-- Header & Statistics -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight theme-contrast">Phản hồi & Đánh giá</h1>
+            <p class="text-gray-500 text-xs mt-1 font-black tracking-widest ">Kiểm duyệt ý kiến khách hàng về hoa quả</p>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <div class="px-5 py-3 bg-blue-600/10 border border-blue-500/30 rounded-2xl flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center text-blue-400">
+                    <i class="bi bi-star-half text-xl"></i>
+                </div>
+                <div>
+                    <span class="text-[9px] text-gray-500 font-bold theme-contrast">
+                        Rating trung bình:
+                    </span>
+
+                    <span class="font-bold text-blue-600 dark:text-blue-400">
+                        @avgRating.ToString("N1")
+                        <span class="text-[10px] text-yellow-400">⭐</span>
+                    </span>
+                </div>
+            </div>
+            <div class="px-5 py-3 bg-indigo-600/10 border border-indigo-500/30 rounded-2xl flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600/20 flex items-center justify-center text-indigo-400">
+                    <i class="bi bi-chat-left-dots text-xl"></i>
+                </div>
+                <div>
+                    <span class="text-[9px] text-gray-500  font-bold text-gray-100 theme-contrast">Tổng đánh giá: </span>
+                    <span class="font-bold text-lg text-blue-600 dark:text-blue-400">@totalReviews</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="flex flex-col md:flex-row items-center gap-4 mb-6">
+        <div class="flex-1 relative w-full">
+            <i class="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
+            <input type="text" id="searchInput" value="@ViewData["SearchTerm"]" placeholder="Tìm tên hoa quả, khách hàng hoặc nội dung phản hồi... (Alt+S)" 
+                   class="w-full pl-10 pr-4 py-2.5 dark-input rounded-xl text-sm" />
+        </div>
+        <div class="flex gap-2 w-full md:w-auto">
+            <select id="ratingFilter" class="dark-input px-4 py-2.5 rounded-xl cursor-pointer text-sm min-w-[150px]">
+                <option value="">Tất cả sao</option>
+                @for(int i=5; i>=1; i--) {
+                    <option value="@i" selected="@(ViewData["Rating"]?.ToString() == i.ToString())">@i Sao</option>
+                }
+            </select>
+            <select id="statusFilter" class="dark-input px-4 py-2.5 rounded-xl cursor-pointer text-sm min-w-[150px]">
+                <option value="">Trạng thái</option>
+                <option value="1" selected="@(ViewData["Status"]?.ToString() == "1")">Đang hiển thị</option>
+                <option value="0" selected="@(ViewData["Status"]?.ToString() == "0")">Đang ẩn</option>
+            </select>
+            <button onclick="applyFilter()" class="btn-primary px-6 py-2.5 rounded-xl font-bold">Lọc</button>
+            <button onclick="resetFilter()" class="p-2.5 rounded-xl bg-gray-800 border border-gray-700 text-gray-400 hover:text-white transition-all">
+                <i class="bi bi-arrow-counterclockwise text-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="dark-card overflow-x-auto shadow-2xl border border-gray-800/50">
+        <table class="w-full">
+            <thead>
+                <tr class="table-header border-b border-gray-700/50 bg-gray-800/30">
+                    <th class="px-6 py-4 text-left text-[10px] font-black tracking-widest theme-contrast">Sản phẩm</th>
+                    <th class="px-6 py-4 text-left text-[10px] font-black  tracking-widest theme-contrast">Người gửi</th>
+                    <th class="px-6 py-4 text-left text-[10px] font-black tracking-widest theme-contrast">Đánh giá & Nội dung</th>
+                    <th class="px-6 py-4 text-left text-[10px] font-black  tracking-widest theme-contrast">Thời gian</th>
+                    <th class="px-6 py-4 text-left text-[10px] font-black tracking-widest theme-contrast">Trạng thái</th>
+                    <th class="px-6 py-4 text-center text-[10px] font-black tracking-widest theme-contrast">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr class="table-row text-sm border-b border-gray-800/30 hover:bg-gray-800/20 transition-colors">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-lg bg-gray-800 overflow-hidden flex-shrink-0 border border-gray-700">
+                                        <img src="@(item.Product?.ProductImages?.FirstOrDefault(i => i.IsMain == 1)?.ImageUrl ?? "/Upload/slide_1_mb.png")" 
+                                             class="w-full h-full object-cover" onerror="this.src='/Upload/slide_1_mb.png'"/>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold leading-tight theme-contrast">@item.Product?.Name</div>
+                                        <div class="text-[10px] text-gray-600 font-mono">SKU: @item.Product?.Sku</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex flex-col">
+                                    <span class="font-medium theme-contrast">@item.User?.FullName</span>
+                                    <span class="text-[10px] text-gray-500 font-mono">@item.User?.Email</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex flex-col gap-1.5">
+                                    <div class="flex gap-0.5 text-yellow-400 text-xs">
+                                        @for(int i=1; i<=5; i++) {
+                                            <i class="bi bi-star@(i <= item.Rating ? "-fill" : "")"></i>
+                                        }
+                                    </div>
+                                    <p class="text-gray-400 italic text-[11px] leading-relaxed max-w-sm">"@item.Comment"</p>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-gray-500 font-mono text-xs">
+                                @item.CreatedAt?.ToString("HH:mm") <br/> @item.CreatedAt?.ToString("dd/MM/yyyy")
+                            </td>
+                            <td class="px-6 py-4">
+                                @if (item.Status == 1) {
+                                    <span class="px-2 py-0.5 rounded-md bg-green-500/10 text-green-400 text-[10px] font-medium border border-green-500/10">Công khai</span>
+                                } else {
+                                    <span class="px-2 py-0.5 rounded-md bg-green-500/10 text-green-400 text-[10px] font-medium border border-green-500/10">Đã ẩn</span>
+                                }
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <button onclick="updateStatus(@item.Id, @(item.Status == 1 ? 0 : 1))" 
+                                            class="p-2 rounded-lg @(item.Status == 1 ? "text-yellow-400 hover:bg-yellow-400/10" : "text-green-400 hover:bg-green-400/10") transition-all" 
+                                            title="@(item.Status == 1 ? "Ẩn bình luận" : "Phê duyệt hiển thị")">
+                                        <i class="bi bi-@(item.Status == 1 ? "eye-slash" : "check-circle")-fill text-lg"></i>
+                                    </button>
+                                    <button onclick="deleteReview(@item.Id)" class="p-2 rounded-lg text-red-400 hover:bg-red-400/10 transition-all" title="Xóa vĩnh viễn">
+                                        <i class="bi bi-trash-fill text-lg"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="6" class="px-6 py-20 text-center text-gray-500 font-medium italic uppercase tracking-widest text-[10px]">Không tìm thấy đánh giá nào khớp với bộ lọc</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-container flex flex-col items-center gap-4 mt-8">
+        @if ((int)ViewData["TotalPages"] > 1)
+        {
+            <div class="flex items-center justify-center gap-2">
+                <button onclick="goToPage(1)" class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-blue-400 transition-all @((int)ViewData["CurrentPage"] == 1 ? "pointer-events-none opacity-30" : "hover:bg-gray-700")">
+                    <i class="bi bi-chevron-double-left"></i>
+                </button>
+                
+                @for (int i = Math.Max(1, (int)ViewData["CurrentPage"] - 2); i <= Math.Min((int)ViewData["TotalPages"], (int)ViewData["CurrentPage"] + 2); i++)
+                {
+                    <button onclick="goToPage(@i)" class="w-10 h-10 rounded-lg flex items-center justify-center font-bold transition-all @(i == (int)ViewData["CurrentPage"] ? "bg-blue-600 text-white shadow-lg" : "bg-gray-800 text-gray-500 hover:bg-gray-700")">@i</button>
+                }
+
+                <button onclick="goToPage(@((int)ViewData["TotalPages"]))" class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-blue-400 transition-all @((int)ViewData["CurrentPage"] == (int)ViewData["TotalPages"] ? "pointer-events-none opacity-30" : "hover:bg-gray-700")">
+                    <i class="bi bi-chevron-double-right"></i>
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+<div id="toastContainer" class="fixed top-4 right-4 z-[100] space-y-2"></div>
+
+@section Scripts {
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const t = document.createElement('div');
+            t.className = `dark-card px-6 py-4 rounded-2xl border-l-4 ${type === 'success' ? 'border-green-500' : 'border-red-500'} shadow-2xl text-white animate-fade-in flex items-center gap-3 mb-2`;
+            t.innerHTML = `<span class="font-bold text-sm">${msg}</span>`;
+            container.appendChild(t);
+            setTimeout(() => { t.classList.add('opacity-0'); setTimeout(() => t.remove(), 500); }, 3000);
+        }
+
+        function updateStatus(id, status) {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            fetch(`/Reviews/UpdateStatus`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': token
+                },
+                body: `id=${id}&status=${status}`
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    showToast(res.message);
+                    setTimeout(() => location.reload(), 800);
+                }
+            });
+        }
+
+        function deleteReview(id) {
+            if (!confirm("Bạn có muốn ẩn đánh giá này khỏi hệ thống không?")) return;
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            fetch(`/Reviews/Delete/${id}`, {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': token }
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    showToast(res.message);
+                    setTimeout(() => location.reload(), 800);
+                }
+            });
+        }
+
+        function applyFilter() {
+            const search = document.getElementById('searchInput').value;
+            const rating = document.getElementById('ratingFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            window.location.href = `/Reviews?searchTerm=${search}&rating=${rating}&status=${status}`;
+        }
+
+        function goToPage(p) {
+            const search = document.getElementById('searchInput').value;
+            const rating = document.getElementById('ratingFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            window.location.href = `/Reviews?searchTerm=${search}&rating=${rating}&status=${status}&page=${p}`;
+        }
+
+        function resetFilter() { window.location.href = '/Reviews'; }
+
+        document.getElementById('searchInput').onkeypress = (e) => {
+            if (e.key === 'Enter') applyFilter();
+        };
+
+        // Keyboard Shortcuts
+        document.onkeydown = function (e) {
+            if (e.altKey && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+            }
+            if (e.key === '/') {
+                if (document.activeElement.tagName !== 'INPUT') {
+                    e.preventDefault();
+                    document.getElementById('searchInput').focus();
+                }
+            }
+        };
+    </script>
+}
+
+<style>
+    .dark-input:focus { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 0 15px rgba(59, 130, 246, 0.1); }
+</style>

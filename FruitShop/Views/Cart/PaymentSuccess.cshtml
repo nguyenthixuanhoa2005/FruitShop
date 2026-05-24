@@ -1,0 +1,105 @@
+@model dynamic
+
+@{
+    ViewData["Title"] = "Thanh toán thành công";
+    var orderId = ViewBag.OrderId;
+    var orderCode = ViewBag.OrderCode;
+    var totalAmount = ViewBag.TotalAmount;
+    var paymentMethod = ViewBag.PaymentMethod;
+    var receiverName = ViewBag.ReceiverName;
+    var receiverAddress = ViewBag.ReceiverAddress;
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-lg rounded-4 p-5 text-center">
+                <!-- Success Icon -->
+                <div class="mb-4">
+                    <div class="bg-success rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                        <i class="fas fa-check text-white" style="font-size: 40px;"></i>
+                    </div>
+                </div>
+
+                <h2 class="fw-bold text-success mb-2">Đơn hàng đã được tạo thành công!</h2>
+                <p class="text-muted mb-4">Cảm ơn bạn đã mua hàng tại Fruit Shop</p>
+
+                <!-- Order Details -->
+                <div class="card border-0 bg-light rounded-3 p-4 mb-4 text-start">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-file-invoice text-success me-2"></i>Thông tin đơn hàng</h5>
+                    
+                    <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                        <span class="text-muted">Mã đơn hàng:</span>
+                        <span class="fw-bold">@orderCode</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                        <span class="text-muted">Người nhận:</span>
+                        <span class="fw-bold">@receiverName</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                        <span class="text-muted">Địa chỉ giao hàng:</span>
+                        <span class="fw-bold text-end">@receiverAddress</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                        <span class="text-muted">Phương thức thanh toán:</span>
+                        <span class="fw-bold">
+                            @if (paymentMethod == "COD")
+                            {
+                                <span class="badge bg-warning text-dark">Tiền mặt khi nhận hàng</span>
+                            }
+                            else if (paymentMethod == "BANK_TRANSFER")
+                            {
+                                <span class="badge bg-info text-dark">Chuyển khoản ngân hàng</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">Ví điện tử</span>
+                            }
+                        </span>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Tổng tiền:</span>
+                        <span class="fw-bold text-success fs-5">@totalAmount?.ToString("N0") đ</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-grid gap-2">
+                    <a href="/Orders/Details?id=@orderId" class="btn btn-outline-success rounded-pill fw-bold py-3 mb-2">
+                        <i class="fas fa-receipt me-2"></i>Xem chi tiết đơn hàng
+                    </a>
+                    <a href="/Products/Index" class="btn btn-success rounded-pill fw-bold py-3">
+                        <i class="fas fa-shopping-bag me-2"></i>Tiếp tục mua sắm
+                    </a>
+                </div>
+
+                <!-- Contact Info -->
+                <div class="mt-5 pt-4 border-top">
+                    <p class="text-muted small mb-2">
+                        <i class="fas fa-question-circle me-2"></i>
+                        Nếu có bất kỳ câu hỏi nào, hãy liên hệ với chúng tôi
+                    </p>
+                    <p class="text-muted small">
+                        <i class="fas fa-phone me-2"></i>0123 456 789 | 
+                        <i class="fas fa-envelope me-2"></i>contact@fruitshop.vn
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .badge {
+        padding: 8px 12px;
+        font-weight: 500;
+    }
+</style>

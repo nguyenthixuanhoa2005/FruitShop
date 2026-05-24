@@ -1,0 +1,1364 @@
+@model FruitShop.ViewModels.ProductList
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "Danh sách sản phẩm";
+}
+
+<link rel="stylesheet" href="~/css/animations.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/products.css" asp-append-version="true" />
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+
+@Html.AntiForgeryToken()
+
+<div class="min-h-screen pt-0 px-6 pb-20">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-2">
+        <h1 class="text-2xl font-bold tracking-tight theme-contrast">Danh sách sản phẩm</h1>
+        <div class="flex items-center gap-2">
+            <button id="columnConfigBtn" class="text-gray-400 hover:text-white p-2 rounded-full hover:bg-gray-800 transition-all" title="Cấu hình hiển thị cột">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="flex flex-col md:flex-row items-center gap-4 mb-4">
+        <div class="flex items-center gap-2">
+            <div class="relative">
+                <button id="actionsBtn" class="btn-primary w-full md:w-auto px-6 py-2.5" title="Phím tắt: Alt + A">
+                    Hành động
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div id="actionsMenu" class="hidden absolute top-full left-0 mt-2 w-72 dropdown-menu rounded-xl shadow-2xl py-1 z-[9999]">
+                    <button id="importBtn" class="w-full px-4 py-3 text-left hover:bg-gray-700/50 flex items-center gap-3 transition-colors">
+                        <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        <span class="flex-1 text-white font-medium">Nhập dữ liệu <span class="text-[10px] opacity-50 ml-1">(Alt+I)</span></span>
+                    </button>
+                    <div class="border-t border-gray-700/50 my-1"></div>
+                    <button id="exportBtn" class="w-full px-4 py-3 text-left hover:bg-gray-700/50 flex items-center gap-3 transition-colors">
+                        <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span class="flex-1 text-white font-medium">Xuất dữ liệu <span class="text-[10px] opacity-50 ml-1">(Alt+E)</span></span>
+                    </button>
+                    <div class="border-t border-gray-700/50 my-1"></div>
+                    <button id="copySelectedBtn" class="w-full px-4 py-3 text-left hover:bg-gray-700/50 flex items-center gap-3 transition-colors">
+                        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V7m-4 0h4v3m-4-7v4m-2 11h2a2 2 0 002-2v-5a2 2 0 00-2-2H5a2 2 0 00-2 2v5a2 2 0 002 2z" /></svg>
+                        <span class="flex-1 text-white font-medium">Copy đã chọn <span class="text-[10px] opacity-50 ml-1">(Alt+K)</span></span>
+                    </button>
+                    <button id="deleteSelectedBtn" class="w-full px-4 py-3 text-left hover:bg-gray-700/50 flex items-center gap-3 transition-colors group">
+                        <svg class="w-5 h-5 text-red-400 group-hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <span class="flex-1 text-white font-medium">Xóa đã chọn <span class="text-[10px] opacity-50 ml-1">(Alt+D)</span></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 relative flex gap-2 w-full">
+            <div class="flex-1 relative">
+                <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input type="text" id="searchInput" placeholder="Tìm kiếm... (Alt+S hoặc /)" class="w-full pl-10 pr-4 py-2 dark-input rounded-xl" value="@ViewData["SearchTerm"]" />
+            </div>
+            <button id="toggleFilterBtn" class="btn-primary flex items-center gap-2 px-4 py-2" title="Phím tắt: Alt + F">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                Bộ lọc <span class="text-[10px] opacity-50 font-mono">(Alt+F)</span>
+            </button>
+        </div>
+
+        <button id="addBtn" class="btn-primary px-8 py-2.5 whitespace-nowrap" title="Phím tắt: Alt + N">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Thêm mới <span class="text-[10px] opacity-50 ml-1 font-mono">(Alt+N)</span>
+        </button>
+    </div>
+
+    <!-- Filter Panel -->
+    <div id="filterPanel" class="hidden dark-card p-6 mb-6 border border-gray-700/50 animate-slide-down shadow-xl">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="theme-contrast font-bold flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                Bộ lọc nâng cao
+            </h3>
+            <button id="resetFilterBtn" class="text-[10px] text-gray-400 hover:text-white uppercase font-bold px-3 py-1.5 border border-gray-700 rounded-lg transition-all">Đặt lại</button>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-5">
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-semibold text-gray-400 tracking-tight">Tên sản phẩm</label>
+                <input type="text" id="fName" class="dark-input w-full p-2 rounded-lg" placeholder="Nhập tên..." value="@ViewData["fName"]">
+            </div>
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-semibold text-gray-400 tracking-tight">Mã SKU</label>
+                <input type="text" id="fSku" class="dark-input w-full p-2 rounded-lg" placeholder="Nhập SKU..." value="@ViewData["fSku"]">
+            </div>
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-semibold text-gray-400 tracking-tight">Xuất xứ</label>
+                <input type="text" id="fOrigin" class="dark-input w-full p-2 rounded-lg" placeholder="Ví dụ: Mỹ, Úc..." value="@ViewData["fOrigin"]">
+            </div>
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-semibold text-gray-400 tracking-tight">Đơn vị</label>
+                <input type="text" id="fUnit" class="dark-input w-full p-2 rounded-lg" placeholder="Kg, Hộp..." value="@ViewData["fUnit"]">
+            </div>
+
+            <div class="space-y-1.5 md:col-span-2">
+                <label class="text-[11px] font-semibold text-gray-400 tracking-tight">Danh mục sản phẩm</label>
+                <select id="fCategoryId" class="dark-input w-full p-2 rounded-lg cursor-pointer">
+                    <option value="">Tất cả danh mục</option>
+                    @if (ViewBag.Categories != null) { foreach (var cat in (IEnumerable<dynamic>)ViewBag.Categories) { 
+                        bool isSelected = ViewData["fCategoryId"]?.ToString() == cat.Id.ToString();
+                        if (isSelected) { <option value="@cat.Id" selected>@cat.Name</option> } else { <option value="@cat.Id">@cat.Name</option> }
+                    } }
+                </select>
+            </div>
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-semibold text-gray-400 tracking-tight">Nhà cung cấp</label>
+                <select id="fSupplierId" class="dark-input w-full p-2 rounded-lg cursor-pointer">
+                    <option value="">Tất cả nhà cung cấp</option>
+                    @if (ViewBag.Suppliers != null) { foreach (var sup in (IEnumerable<dynamic>)ViewBag.Suppliers) { 
+                        bool isSelected = ViewData["fSupplierId"]?.ToString() == sup.Id.ToString();
+                        if (isSelected) { <option value="@sup.Id" selected>@sup.Name</option> } else { <option value="@sup.Id">@sup.Name</option> }
+                    } }
+                </select>
+            </div>
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-semibold text-gray-400 tracking-tight">Trạng thái</label>
+                <select id="fStatus" class="dark-input w-full p-2 rounded-lg cursor-pointer">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="1" selected="@(ViewData["fStatus"]?.ToString() == "1")">Hoạt động</option>
+                    <option value="0" selected="@(ViewData["fStatus"]?.ToString() == "0")">Ngừng hoạt động</option>
+                </select>
+            </div>
+
+            <div class="space-y-1.5 md:col-span-2">
+                <label class="text-[11px] font-semibold text-gray-400 tracking-tight">Số lượng tồn kho</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="number" id="fMinQty" class="dark-input w-full p-2 rounded-lg" placeholder="Từ" value="@ViewData["fMinQty"]">
+                    <input type="number" id="fMaxQty" class="dark-input w-full p-2 rounded-lg" placeholder="Đến" value="@ViewData["fMaxQty"]">
+                </div>
+            </div>
+            <div class="space-y-1.5 md:col-span-2">
+                <label class="text-[11px] font-semibold text-gray-400 tracking-tight">Khoảng giá gốc (VNĐ)</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="number" id="fMinPrice" class="dark-input w-full p-2 rounded-lg" placeholder="Từ" value="@ViewData["fMinPrice"]">
+                    <input type="number" id="fMaxPrice" class="dark-input w-full p-2 rounded-lg" placeholder="Đến" value="@ViewData["fMaxPrice"]">
+                </div>
+            </div>
+            <div class="space-y-1.5 md:col-span-2">
+                <label class="text-[11px] font-semibold text-gray-400 tracking-tight">Khoảng % giảm giá</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="number" id="fMinDiscountPercent" class="dark-input w-full p-2 rounded-lg" placeholder="Từ" value="@ViewData["fMinDiscountPercent"]">
+                    <input type="number" id="fMaxDiscountPercent" class="dark-input w-full p-2 rounded-lg" placeholder="Đến" value="@ViewData["fMaxDiscountPercent"]">
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex justify-end mt-8 border-t border-gray-700/50 pt-6">
+            <button id="applyFilterBtn" class="bg-blue-600 hover:bg-blue-500 text-white px-10 py-2 rounded-xl font-bold shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                Áp dụng bộ lọc
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="dark-card overflow-x-auto shadow-2xl">
+        <table class="w-full" id="productTable">
+            <thead>
+                <tr class="table-header border-b border-gray-700/50">
+                    <th class="px-4 py-3 text-left sticky-col" data-col-id="checkbox"><input type="checkbox" id="selectAll" class="w-4 h-4 cursor-pointer accent-blue-600" /></th>
+                    <th class="px-4 py-3 text-left sticky-col" data-col-id="stt">STT</th>
+                    <th class="px-4 py-3 text-left sortable-header cursor-pointer group" data-column="code" data-col-id="column-code">
+                        <div class="flex items-center gap-1.5 theme-contrast">Mã SKU <span class="sort-icon opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg></span></div>
+                    </th>
+                    <th class="px-4 py-3 text-left sortable-header cursor-pointer group" data-column="name" data-col-id="column-name">
+                        <div class="flex items-center gap-1.5 theme-contrast">Tên sản phẩm <span class="sort-icon opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg></span></div>
+                    </th>
+                    <th class="px-4 py-3 text-left sortable-header cursor-pointer group" data-column="category" data-col-id="column-category">
+                        <div class="flex items-center gap-1.5 theme-contrast">Danh mục <span class="sort-icon opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg></span></div>
+                    </th>
+                    <th class="px-4 py-3 text-left sortable-header cursor-pointer group" data-column="supplier" data-col-id="column-supplier">
+                        <div class="flex items-center gap-1.5 theme-contrast">Nhà cung cấp <span class="sort-icon opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg></span></div>
+                    </th>
+                    <th class="px-4 py-3 text-left sortable-header cursor-pointer group" data-column="price" data-col-id="column-price">
+                        <div class="flex items-center gap-1.5">Giá gốc <span class="sort-icon opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg></span></div>
+                    </th>
+                    <th class="px-4 py-3 text-left sortable-header cursor-pointer group" data-column="discount" data-col-id="column-discount">
+                        <div class="flex items-center gap-1.5">Giảm (%) <span class="sort-icon opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg></span></div>
+                    </th>
+                    <th class="px-4 py-3 text-left sortable-header cursor-pointer group" data-column="finalprice" data-col-id="column-finalprice">
+                        <div class="flex items-center gap-1.5">Sau giảm <span class="sort-icon opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg></span></div>
+                    </th>
+                    <th class="px-4 py-3 text-left sortable-header cursor-pointer group" data-column="type" data-col-id="column-type">
+                        <div class="flex items-center gap-1.5">Xuất xứ <span class="sort-icon opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg></span></div>
+                    </th>
+                    <th class="px-4 py-3 text-left sortable-header cursor-pointer group" data-column="unit" data-col-id="column-unit">
+                        <div class="flex items-center gap-1.5">Đơn vị <span class="sort-icon opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg></span></div>
+                    </th>
+                    <th class="px-4 py-3 text-left sortable-header cursor-pointer group" data-column="quantity" data-col-id="column-quantity">
+                        <div class="flex items-center gap-1.5">Tồn kho <span class="sort-icon opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg></span></div>
+                    </th>
+                    <th class="px-4 py-3 text-left sortable-header cursor-pointer group" data-column="status" data-col-id="column-status">
+                        <div class="flex items-center gap-1.5">Trạng thái <span class="sort-icon opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg></span></div>
+                    </th>
+                    <th class="px-4 py-3 text-center" data-col-id="column-image">Ảnh</th>
+                    <th class="px-4 py-3 text-center sticky-col-right" data-col-id="actions">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                @if (Model.Products != null && Model.Products.Any())
+                {
+                    int index = ((Model.CurrentPage - 1) * Model.PageSize) + 1;
+                    foreach (var item in Model.Products)
+                    {
+                        var mainImg = item.ProductImages.FirstOrDefault(i => i.IsMain == 1)?.ImageUrl ?? item.ProductImages.FirstOrDefault()?.ImageUrl;
+                        <tr class="table-row text-sm border-b border-gray-800/30 hover:bg-gray-800/20 transition-colors" data-id="@item.Id"
+                            data-copy-sku="@item.Sku" data-copy-name="@item.Name" data-copy-category="@item.CategoryId" data-copy-supplier="@item.SupplierId"
+                            data-copy-price="@item.Price" data-copy-discount-percent="@(item.DiscountPercent ?? 0)"
+                            data-copy-origin="@item.Origin" data-copy-unit="@item.Unit" data-copy-qty="@(item.StockQuantity ?? 0)"
+                            data-copy-status="@item.Status"
+                            data-copy-images='@Html.Raw(JsonSerializer.Serialize(item.ProductImages.Select(i => new { ImageUrl = i.ImageUrl, IsMain = i.IsMain })))'
+                            data-copy-desc="@item.Description">
+                            <td class="px-4 py-3 sticky-col" data-col-id="checkbox"><input type="checkbox" class="productCheckbox w-4 h-4 cursor-pointer accent-blue-600" data-id="@item.Id" /></td>
+                            <td class="px-4 py-3 sticky-col text-gray-500 font-mono" data-col-id="stt">@index</td>
+                            <td class="px-4 py-3 font-mono text-blue-400" data-col-id="column-code">@item.Sku</td>
+                            <td class="px-4 py-3" data-col-id="column-name">
+                                <div class="text-xs md:text-sm font-medium flex items-center gap-2 theme-contrast">
+                                    @item.Name
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 theme-contrast" data-col-id="column-category">@(item.Category?.Name ?? "—")</td>
+                            <td class="px-4 py-3 theme-contrast" data-col-id="column-supplier">@(item.Supplier?.Name ?? "—")</td>
+                            <td class="px-4 py-3 text-gray-400" data-col-id="column-price">@String.Format("{0:N0}", item.Price) đ</td>
+                            <td class="px-4 py-3 text-yellow-400 font-bold" data-col-id="column-discount">@(item.DiscountPercent > 0 ? $"-{item.DiscountPercent}%" : "—")</td>
+                            <td class="px-4 py-3 text-green-400 font-bold" data-col-id="column-finalprice">@String.Format("{0:N0}", item.FinalPrice ?? item.Price) đ</td>
+                            <td class="px-4 py-3" data-col-id="column-type">
+                                <div class="text-xs md:text-sm font-medium flex items-center gap-2 theme-contrast">
+                                    @item.Origin
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-gray-400" data-col-id="column-unit">@item.Unit</td>
+                            <td class="px-4 py-3 font-mono" data-col-id="column-quantity">@(item.StockQuantity ?? 0)</td>
+                            <td class="px-4 py-3" data-col-id="column-status">
+                                <span class="px-2 py-1 rounded-full text-[10px] font-bold @(item.Status == 1 ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400")">
+                                    @(item.Status == 1 ? "Hoạt động" : "Ngừng")
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-center" data-col-id="column-image">
+                                <img src="@(string.IsNullOrEmpty(mainImg) ? "https://placehold.co/50" : mainImg)" class="w-10 h-10 object-cover rounded mx-auto shadow-md border border-gray-700" onerror="this.onerror=null;this.src='https://placehold.co/50';" />
+                            </td>
+                            <td class="px-4 py-3 text-center sticky-col-right" data-col-id="actions">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <button type="button" class="viewBtn p-1.5 rounded-lg text-blue-400 hover:bg-blue-400/10 transition-all" title="Xem chi tiết" 
+                                            data-id="@item.Id">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                    </button>
+                                    <button type="button" class="copySingleBtn p-1.5 rounded-lg text-purple-400 hover:bg-purple-400/10 transition-all" title="Copy dòng này">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V7m-4 0h4v3m-4-7v4m-2 11h2a2 2 0 002-2v-5a2 2 0 00-2-2H5a2 2 0 00-2 2v5a2 2 0 002 2z" /></svg>
+                                    </button>
+                                    <button type="button" class="editBtn p-1.5 rounded-lg text-yellow-400 hover:bg-yellow-400/10 transition-all" title="Sửa">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                    </button>
+                                    <button type="button" class="deleteSingleBtn p-1.5 rounded-lg text-red-400 hover:bg-red-400/10 transition-all" title="Xóa" data-id="@item.Id">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        index++;
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="15" class="px-4 py-16 text-center text-gray-500 font-medium">Không tìm thấy sản phẩm nào khớp với bộ lọc.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-container flex flex-col items-center gap-4 mt-8">
+        @if (Model.TotalPages > 1)
+        {
+            <div class="flex items-center justify-center gap-2">
+                <button data-page="1" class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-blue-400 transition-all @(Model.CurrentPage == 1 ? "pointer-events-none opacity-30" : "hover:bg-gray-700 hover:text-white")"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M15.707 15.707a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 010 1.414zm-6 0a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 1.414L5.414 10l4.293 4.293a1 1 0 010 1.414z" /></svg></button>
+                @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages, Model.CurrentPage + 2); i++)
+                {
+                    <button data-page="@i" class="w-10 h-10 rounded-lg flex items-center justify-center font-bold transition-all @(i == Model.CurrentPage ? "bg-blue-600 text-white shadow-lg shadow-blue-900/40" : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white")">@i</button>
+                }
+                <button data-page="@Model.TotalPages" class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-blue-400 transition-all @(Model.CurrentPage == Model.TotalPages ? "pointer-events-none opacity-30" : "hover:bg-gray-700 hover:text-white")"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414zm6 0a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414-1.414L14.586 10l-4.293-4.293a1 1 0 010-1.414z" /></svg></button>
+                
+                <div class="flex items-center gap-2 ml-4 px-3 py-1.5 bg-gray-800/50 rounded-xl border border-gray-700/50">
+                    <span class="text-[10px] text-gray-500 uppercase font-bold">Đi tới</span>
+                    <input type="number" id="goToPageInput" value="@Model.CurrentPage" min="1" max="@Model.TotalPages" class="w-12 bg-transparent text-white text-center text-sm font-bold focus:outline-none" />
+                    <span class="text-[10px] text-gray-500">/ @Model.TotalPages</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal Form -->
+<div id="productModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+    <div class="dark-card w-full max-w-2xl p-8 rounded-2xl shadow-2xl border border-gray-700 animate-fade-in max-h-[90vh] overflow-y-auto scrollbar-thin">
+        <div class="flex items-center justify-between gap-4 mb-8 border-b border-gray-700/50 pb-5">
+            <div class="flex items-center gap-3">
+                <h3 id="modalTitle" class="text-2xl font-bold tracking-tight theme-contrast">Thêm sản phẩm</h3>
+                <div class="relative" id="pasteDropdownContainer">
+                    <button type="button" id="openPastePickerBtn" class="flex items-center gap-2 px-3 py-1.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-xs font-bold hover:bg-purple-600/30 transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                        Dán <span id="clipboardBadge" class="hidden ml-1 px-1.5 py-0.5 bg-purple-600 text-white rounded-full text-[10px]">0</span>
+                    </button>
+                    <div id="pasteMenu" class="hidden absolute top-full left-0 mt-2 w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl py-2 z-[60] max-h-64 overflow-y-auto scrollbar-thin">
+                        <div class="px-3 py-1 text-[10px] text-gray-500 uppercase font-bold border-b border-gray-700 mb-1 flex justify-between items-center">
+                            <span>Bảng tạm</span>
+                            <button type="button" id="clearClipboard" class="text-red-400 hover:underline">Xóa hết</button>
+                        </div>
+                        <div id="pasteList"></div>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="close-modal text-gray-400 hover:text-white transition-colors"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button>
+        </div>
+        <form id="productForm" class="grid grid-cols-2 gap-x-6 gap-y-5">
+            <input type="hidden" id="productId" name="Id">
+            <input type="hidden" id="mainImageIndex" name="mainImageIndex" value="0">
+            <input type="hidden" id="existingImagesJson" name="existingImagesJson" value="[]">
+
+            <div class="space-y-1.5"><label class="text-sm font-semibold theme-contrast">Mã SKU *</label><input type="text" id="productCode" name="Sku" class="dark-input w-full p-2.5 rounded-lg border border-gray-600 focus:border-blue-500" required></div>
+            <div class="space-y-1.5"><label class="text-sm font-semibold theme-contrast">Tên sản phẩm *</label><input type="text" id="productName" name="Name" class="dark-input w-full p-2.5 rounded-lg border border-gray-600 focus:border-blue-500" required></div>
+            <div class="space-y-1.5"><label class="text-sm font-semibold theme-contrast">Danh mục *</label><select id="productCategory" name="CategoryId" class="dark-input w-full p-2.5 rounded-lg border border-gray-600" required><option value="">-- Chọn danh mục --</option>
+                @if (ViewBag.Categories != null) { foreach (var cat in (IEnumerable<dynamic>)ViewBag.Categories) { <option value="@cat.Id">@cat.Name</option> } }
+            </select></div>
+            <div class="space-y-1.5"><label class="text-sm font-semibold theme-contrast">Nhà cung cấp</label>
+                <select id="productSupplier" name="SupplierId" class="dark-input w-full p-2.5 rounded-lg border border-gray-600">
+                    <option value="">-- Chọn nhà cung cấp --</option>
+                    @if (ViewBag.Suppliers != null) { foreach (var sup in (IEnumerable<dynamic>)ViewBag.Suppliers) { <option value="@sup.Id">@sup.Name</option> } }
+                </select>
+            </div>
+            <div class="space-y-1.5"><label class="text-sm font-semibold theme-contrast">Giá gốc (VNĐ) *</label><input type="number" id="productPrice" name="Price" class="dark-input w-full p-2.5 rounded-lg border border-gray-600" required></div>
+            <div class="space-y-1.5"><label class="text-sm font-semibold theme-contrast">Giảm giá (%)</label><input type="number" id="productDiscountPercent" name="DiscountPercent" min="0" max="100" step="0.01" class="dark-input w-full p-2.5 rounded-lg border border-gray-600"></div>
+            <div class="space-y-1.5"><label class="text-sm font-semibold theme-contrast">Số lượng tồn *</label><input type="number" id="productQuantity" name="StockQuantity" class="dark-input w-full p-2.5 rounded-lg border border-gray-600" required></div>
+            <div class="space-y-1.5"><label class="text-sm font-semibold theme-contrast">Xuất xứ *</label><input type="text" id="productType" name="Origin" class="dark-input w-full p-2.5 rounded-lg border border-gray-600" required></div>
+            <div class="space-y-1.5"><label class="text-sm font-semibold theme-contrast">Đơn vị *</label><input type="text" id="productUnit" name="Unit" class="dark-input w-full p-2.5 rounded-lg border border-gray-600" required></div>
+            
+            <div class="space-y-1.5 col-span-2">
+                <label class="text-sm font-semibold theme-contrast">Hình ảnh (Nhấp đúp chuột để chọn ảnh chính)</label>
+                <div id="imageGallery" class="grid grid-cols-5 gap-3 p-3 bg-gray-800/50 rounded-xl border border-gray-700 min-h-[120px]"></div>
+                <input type="file" id="productImageFiles" accept="image/*" multiple class="hidden">
+                <button type="button" onclick="document.getElementById('productImageFiles').click()" class="mt-2 text-blue-400 text-xs font-bold hover:underline transition-all flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Thêm ảnh mới từ máy tính
+                </button>
+            </div>
+
+            <div class="space-y-1.5 col-span-2"><label class="text-sm font-semibold theme-contrast">Mô tả sản phẩm</label><textarea id="productDescription" name="Description" class="dark-input w-full p-2.5 rounded-lg border border-gray-600 h-24 scrollbar-thin"></textarea></div>
+            
+            <div class="col-span-2 flex gap-4 mt-4">
+                <button type="button" class="close-modal flex-1 py-3.5 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 text-gray-300 rounded-xl font-bold transition-all">Hủy bỏ</button>
+                <button type="submit" class="flex-1 py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-900/20 transition-all">Lưu sản phẩm (Ctrl+S)</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Chi Tiết -->
+<div id="detailsModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+    <div class="dark-card w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl border border-gray-700 animate-fade-in scrollbar-thin">
+        <div class="sticky top-0 bg-gray-900/95 backdrop-blur-md px-5 py-4 border-b border-gray-700/50 flex items-center justify-between z-10">
+            <h3 class="text-base md:text-lg font-bold text-white flex items-center gap-3 tracking-tight">
+                <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Chi tiết sản phẩm: <span id="detName" class="text-blue-400"></span>
+            </h3>
+            <button class="close-modal text-gray-400 hover:text-white transition-all"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+        </div>
+        
+        <div class="p-5 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+            <!-- Left: Images -->
+            <div class="space-y-3">
+                <div class="aspect-square rounded-2xl bg-gray-800 border border-gray-700 overflow-hidden group relative">
+                    <img id="detMainImg" src="" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onerror="this.onerror=null;this.src='https://placehold.co/700x700?text=No+Image';">
+                    <div class="absolute top-3 left-3">
+                        <span id="detStatusBadge" class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest"></span>
+                    </div>
+                    <div class="absolute bottom-3 right-3">
+                        <span id="detImageCount" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-black/60 text-gray-100 border border-white/10">0 ảnh</span>
+                    </div>
+                </div>
+                <div id="detImgGrid" class="grid grid-cols-5 gap-2">
+                    <!-- Thumbnails -->
+                </div>
+            </div>
+            
+            <!-- Right: Info -->
+            <div class="space-y-5">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Mã SKU</label>
+                        <p id="detSku" class="text-sm md:text-base font-mono font-bold text-blue-400"></p>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Ngày tạo</label>
+                        <p id="detCreatedAt" class="text-xs md:text-sm text-gray-300"></p>
+                    </div>
+                </div>
+                
+                <div class="space-y-4 bg-gray-800/30 p-4 md:p-5 rounded-2xl border border-gray-700/50">
+                    <div class="flex items-end gap-4 flex-wrap">
+                        <div class="flex-1">
+                            <label class="text-[10px] uppercase font-bold text-gray-500 tracking-wider mb-1 block">Giá bán hiện tại</label>
+                            <div class="flex items-center gap-2 md:gap-3 flex-wrap">
+                                <span id="detFinalPrice" class="text-2xl md:text-3xl font-black text-red-500"></span>
+                                <span id="detOldPrice" class="text-sm md:text-base text-gray-500 line-through"></span>
+                                <span id="detDiscountPercent" class="text-xs bg-red-600/20 text-red-400 px-2 py-0.5 rounded-full font-bold ml-1"></span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <label class="text-[10px] uppercase font-bold text-gray-500 tracking-wider mb-1 block">Tồn kho</label>
+                            <span id="detStock" class="text-xl md:text-2xl font-bold text-blue-400 font-mono"></span>
+                            <span id="detUnit" class="text-xs text-gray-500 ml-1"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    <div class="space-y-1">
+                        <label class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Danh mục</label>
+                        <p id="detCategory" class="text-xs md:text-sm font-medium flex items-center gap-2 theme-contrast">
+                            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7c.78.78.78 2.047 0 2.828l-7 7c-.78.78-2.047.78-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                            <span class="val"></span>
+                        </p>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Nhà cung cấp</label>
+                        <p id="detSupplier" class="text-xs md:text-sm font-medium flex items-center gap-2 theme-contrast">
+                            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                            <span class="val"></span>
+                        </p>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Xuất xứ</label>
+                        <p id="detOrigin" class="text-xs md:text-sm font-medium flex items-center gap-2 theme-contrast">
+                            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <span class="val"></span>
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Mô tả sản phẩm</label>
+                    <div id="detDesc" class="text-xs md:text-sm text-gray-400 leading-relaxed border-t border-gray-700/30 pt-3 whitespace-pre-wrap"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-5 md:p-6 border-t border-gray-700/50 flex justify-end gap-3 bg-gray-800/10">
+            <button class="close-modal px-6 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-xl text-sm font-bold transition-all">Đóng chi tiết</button>
+            <button id="detEditBtn" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-blue-900/20">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                Chỉnh sửa sản phẩm
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Column Config -->
+<div id="columnConfigModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+    <div class="dark-card w-full max-w-md p-6 rounded-2xl border border-gray-700 shadow-2xl">
+        <div class="flex items-center justify-between mb-4 border-b border-gray-700/50 pb-3">
+            <h3 class="text-white font-bold flex items-center gap-2">
+                <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"></path></svg>
+                Cấu hình hiển thị cột
+            </h3>
+            <button class="close-modal text-gray-400 hover:text-white transition-all"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+        <div id="columnList" class="space-y-2 mb-6 max-h-80 overflow-y-auto pr-2 scrollbar-thin"></div>
+        <div class="flex gap-3">
+            <button id="resetColumnsBtn" class="flex-1 py-2.5 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 rounded-xl font-bold transition-all theme-contrast">Đặt lại</button>
+            <button id="saveColumnsBtn" class="flex-1 py-2.5 bg-blue-600 rounded-xl font-bold hover:bg-blue-500 transition-all theme-contrast">Lưu cấu hình</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nhập Dữ Liệu -->
+<div id="importModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+    <div class="dark-card w-full max-w-lg p-8 rounded-2xl shadow-2xl border border-gray-700 animate-fade-in">
+        <div class="flex items-center justify-between mb-6 border-b border-gray-700/50 pb-4">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                Nhập dữ liệu sản phẩm
+            </h3>
+            <button class="close-modal text-gray-400 hover:text-white transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+
+        <div class="bg-blue-900/10 border border-blue-800/30 rounded-xl p-4 mb-6 flex items-start gap-4">
+            <div class="bg-blue-600/20 p-2 rounded-lg">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div class="flex-1">
+                <p class="text-xs text-blue-200 leading-relaxed">Sử dụng file Excel (.xlsx) hoặc CSV (.csv) đúng định dạng để nhập hàng loạt sản phẩm. Tải file mẫu bên dưới nếu bạn chưa có.</p>
+                <a href="/AdminProducts/DownloadTemplate" class="inline-flex items-center gap-1.5 mt-2 text-blue-400 text-[11px] font-bold hover:text-blue-300 transition-colors uppercase tracking-wider">
+                    Tải file mẫu tại đây
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                </a>
+            </div>
+        </div>
+
+        <input type="file" id="importFileInput" class="hidden" accept=".xlsx,.csv">
+        <div id="importDropzone" onclick="document.getElementById('importFileInput').click()" class="w-full py-12 border-2 border-dashed border-gray-700 rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-blue-500 hover:bg-blue-500/5 transition-all group">
+            <div class="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center text-gray-500 group-hover:bg-blue-600/20 group-hover:text-blue-400 transition-all">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            </div>
+            <div class="text-center">
+                <p class="text-sm font-bold text-gray-300 group-hover:text-blue-400 transition-colors">Nhấp để chọn hoặc kéo thả file</p>
+                <p class="text-[11px] text-gray-500 mt-1 uppercase tracking-tighter">Hỗ trợ XLSX, CSV tối đa 10MB</p>
+            </div>
+        </div>
+
+        <div id="filePreview" class="hidden mt-4 p-4 bg-gray-800/50 border border-gray-700 rounded-xl flex items-center gap-4 animate-slide-up">
+            <div id="fileIcon" class="w-10 h-10 flex items-center justify-center rounded-lg bg-green-600/20 text-green-400 font-bold text-xs uppercase">XLSX</div>
+            <div class="flex-1 min-w-0">
+                <p id="fileName" class="text-sm text-white font-bold truncate"></p>
+                <p id="fileSize" class="text-[10px] text-gray-500 uppercase font-medium"></p>
+            </div>
+            <button type="button" id="removeImportFile" class="text-gray-500 hover:text-red-400 transition-colors p-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+        </div>
+
+        <div id="importResultBox" class="hidden mt-4 p-4 rounded-xl border text-[13px] text-left max-h-48 overflow-y-auto leading-relaxed scrollbar-thin"></div>
+
+        <div class="flex gap-4 mt-8">
+            <button class="close-modal flex-1 py-3 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 text-gray-300 rounded-xl font-bold transition-all text-sm">Hủy bỏ</button>
+            <button id="importSubmitBtn" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+                <span>Bắt đầu nhập</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Xuất Dữ Liệu -->
+<div id="exportModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+    <div class="dark-card w-full max-w-md p-8 rounded-2xl shadow-2xl border border-gray-700">
+        <div class="flex items-center justify-between mb-6 border-b border-gray-700/50 pb-4">
+            <h3 class="text-xl font-bold text-white">Xuất dữ liệu</h3>
+            <button type="button" class="close-modal text-gray-400 hover:text-white transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+        <div class="space-y-4 mb-6">
+            <label class="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl border border-gray-700/50 cursor-pointer hover:border-blue-500 transition-all">
+                <input type="radio" name="exportScope" value="all" checked class="accent-blue-500 w-4 h-4">
+                <div class="text-white text-sm font-medium">Tất cả sản phẩm hiện có</div>
+            </label>
+            <label class="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl border border-gray-700/50 cursor-pointer hover:border-blue-500 transition-all">
+                <input type="radio" name="exportScope" value="selected" class="accent-blue-500 w-4 h-4">
+                <div class="text-white text-sm font-medium">Sản phẩm đã chọn (<span id="exportSelectedCount" class="text-blue-400">0</span>)</div>
+            </label>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <button type="button" class="export-fmt-btn selected p-3 rounded-xl border-2 border-green-500 bg-green-900/20 text-white text-xs font-bold transition-all" data-format="excel">EXCEL (.xlsx)</button>
+            <button type="button" class="export-fmt-btn p-3 rounded-xl border-2 border-gray-700/50 bg-gray-800/50 text-gray-400 text-xs font-bold transition-all" data-format="csv">CSV (.csv)</button>
+            <button type="button" class="export-fmt-btn p-3 rounded-xl border-2 border-gray-700/50 bg-gray-800/50 text-gray-400 text-xs font-bold transition-all" data-format="json">JSON (.json)</button>
+            <button type="button" class="export-fmt-btn p-3 rounded-xl border-2 border-gray-700/50 bg-gray-800/50 text-gray-400 text-xs font-bold transition-all" data-format="xml">XML (.xml)</button>
+        </div>
+        <button type="button" id="doExportBtn" class="w-full py-3.5 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Tải xuống file kết quả
+        </button>
+    </div>
+</div>
+
+<!-- Modal Xác nhận xóa -->
+<div id="deleteConfirmModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+    <div class="dark-card w-full max-w-sm p-8 rounded-2xl border border-gray-700 text-center shadow-2xl">
+        <div class="w-20 h-20 bg-red-900/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6"><svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg></div>
+        <h3 class="text-xl font-bold text-white mb-2">Xác nhận xóa bỏ?</h3>
+        <p class="text-gray-400 text-sm mb-8" id="deleteConfirmMessage">Hành động này sẽ xóa vĩnh viễn dữ liệu và không thể hoàn tác.</p>
+        <div class="flex gap-4">
+            <button class="close-modal flex-1 py-3 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 text-gray-400 hover:text-white rounded-xl font-bold transition-all">Quay lại</button>
+            <button id="confirmDeleteBtn" class="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold shadow-lg shadow-red-900/20 transition-all">Đồng ý xóa</button>
+        </div>
+    </div>
+</div>
+
+<div id="toastContainer" class="fixed top-4 right-4 z-[100] space-y-2"></div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            let isEditMode = false;
+            let currentImages = []; // { url: string, isMain: 0/1, file: File|null }
+            let deleteTarget = null;
+            let deleteType = 'single';
+            let selectedExportFormat = 'excel';
+            let isAllSelectedAcrossPages = false; 
+            const urlParams = new URLSearchParams(window.location.search);
+
+            // --- HELPER FUNCTIONS ---
+            function showToast(msg, type = 'success') {
+                const container = document.getElementById('toastContainer');
+                if (!container) return;
+                const t = document.createElement('div');
+                t.className = `dark-card px-6 py-3.5 rounded-xl border-l-4 ${type === 'success' ? 'border-blue-500' : 'border-red-500'} shadow-2xl text-white animate-fade-in mb-2 flex items-center gap-3`;
+                const icon = type === 'success' ? '<svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>' : '<svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>';
+                t.innerHTML = `${icon} <span class="font-medium text-sm">${msg}</span>`;
+                container.appendChild(t);
+                setTimeout(() => {
+                    t.classList.add('opacity-0');
+                    setTimeout(() => t.remove(), 500);
+                }, 3000);
+            }
+
+            function optimizeCloudinaryUrl(url) {
+                if (!url || !url.includes('cloudinary.com')) return url;
+                if (url.includes('/f_auto,q_auto/')) return url;
+                return url.replace('/upload/', '/upload/f_auto,q_auto/');
+            }
+
+            const formatMoney = (v) => v ? parseInt(v).toLocaleString('vi-VN') + ' đ' : '—';
+
+            // --- SELECTION LOGIC ---
+            const totalItems = @Model.TotalItems;
+            const updateSelectionUI = () => {
+                const checkboxes = document.querySelectorAll('.productCheckbox');
+                const checkedCount = document.querySelectorAll('.productCheckbox:checked').length;
+                const selectAllEl = document.getElementById('selectAll');
+                
+                let displayCount = isAllSelectedAcrossPages ? totalItems : checkedCount;
+
+                const existingInfo = document.getElementById('selectionInfo');
+                if (displayCount > 0) {
+                    if (!existingInfo) {
+                        const info = document.createElement('div');
+                        info.id = 'selectionInfo';
+                        info.className = 'bg-blue-600/20 text-blue-400 px-4 py-2 rounded-lg text-xs font-bold mb-4 animate-fade-in flex items-center justify-between border border-blue-500/30';
+                        info.innerHTML = `<span id="selectionText">Đã chọn ${displayCount}</span>`;
+                        const table = document.getElementById('productTable');
+                        if (table && table.parentNode) table.parentNode.insertBefore(info, table);
+                    } else {
+                        document.getElementById('selectionText').innerText = `Đã chọn ${displayCount}`;
+                    }
+                } else if (existingInfo) {
+                    existingInfo.remove();
+                }
+
+                if (selectAllEl) {
+                    if (isAllSelectedAcrossPages) selectAllEl.checked = true;
+                    else selectAllEl.checked = (checkboxes.length > 0 && checkedCount === checkboxes.length);
+                }
+            };
+
+            document.getElementById('selectAll').onchange = function () {
+                const checkboxes = document.querySelectorAll('.productCheckbox');
+                checkboxes.forEach(cb => cb.checked = this.checked);
+                isAllSelectedAcrossPages = this.checked; 
+                updateSelectionUI();
+            };
+
+            function handleCheckboxChange() {
+                if (!this.checked && isAllSelectedAcrossPages) {
+                    isAllSelectedAcrossPages = false;
+                }
+                updateSelectionUI();
+            }
+
+            // --- CLIPBOARD LOGIC ---
+            const CLIPBOARD_KEY = 'fruitshop_product_clipboard';
+            const loadClipboard = () => { try { return JSON.parse(sessionStorage.getItem(CLIPBOARD_KEY)) || []; } catch { return []; } };
+            const updateClipboardBadge = () => {
+                const n = loadClipboard().length;
+                const b = document.getElementById('clipboardBadge');
+                if (b) { b.innerText = n; b.classList.toggle('hidden', n === 0); }
+            };
+            const pushToClipboard = (snaps) => {
+                const arr = snaps.concat(loadClipboard()).slice(0, 50);
+                sessionStorage.setItem(CLIPBOARD_KEY, JSON.stringify(arr));
+                updateClipboardBadge();
+            };
+
+            document.getElementById('openPastePickerBtn').onclick = (e) => {
+                e.stopPropagation();
+                const list = document.getElementById('pasteList');
+                const items = loadClipboard();
+                list.innerHTML = items.length ? '' : '<div class="px-3 py-4 text-center text-gray-500 text-xs uppercase font-bold tracking-widest">Trống</div>';
+                items.forEach((s, idx) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'w-full px-3 py-2.5 text-left hover:bg-gray-700/50 border-b border-gray-700/30 last:border-0 transition-colors group';
+                    btn.innerHTML = `
+                        <div class="flex justify-between items-start gap-2 mb-0.5">
+                            <span class="text-[10px] text-blue-400 font-bold font-mono">${s.sku || 'N/A'}</span>
+                            <span class="text-[10px] text-green-400 font-bold">${new Intl.NumberFormat('vi-VN').format(s.price || 0)}đ</span>
+                        </div>
+                        <div class="text-[11px] text-gray-200 font-medium truncate">${s.name || 'Sản phẩm'}</div>
+                    `;
+                    btn.onclick = () => {
+                        document.getElementById('productCode').value = s.sku || '';
+                        document.getElementById('productName').value = s.name || '';
+                        document.getElementById('productCategory').value = s.categoryId || '';
+                        document.getElementById('productSupplier').value = s.supplierId || '';
+                        document.getElementById('productPrice').value = s.price || '';
+                        document.getElementById('productDiscountPercent').value = s.discountPercent || '';
+                        document.getElementById('productType').value = s.origin || '';
+                        document.getElementById('productUnit').value = s.unit || '';
+                        document.getElementById('productQuantity').value = s.stock || s.qty || '';
+                        document.getElementById('productDescription').value = s.desc || '';
+                        currentImages = (s.images || []).map(i => ({ url: i.ImageUrl, isMain: i.IsMain, file: null }));
+                        renderGallery();
+                        document.getElementById('pasteMenu').classList.add('hidden');
+                        showToast('Đã dán dữ liệu từ bảng tạm');
+                    };
+                    list.appendChild(btn);
+                });
+                document.getElementById('pasteMenu').classList.toggle('hidden');
+            };
+
+            document.getElementById('clearClipboard').onclick = (e) => {
+                e.stopPropagation();
+                sessionStorage.removeItem(CLIPBOARD_KEY);
+                updateClipboardBadge();
+                document.getElementById('pasteMenu').classList.add('hidden');
+                showToast('Đã xóa sạch bảng tạm');
+            };
+
+            // --- GALLERY LOGIC ---
+            function renderGallery() {
+                const gallery = document.getElementById('imageGallery');
+                if (!gallery) return;
+                gallery.innerHTML = '';
+                currentImages.forEach((img, idx) => {
+                    const div = document.createElement('div');
+                    div.className = `relative aspect-square rounded-xl overflow-hidden border-2 transition-all cursor-pointer group shadow-inner ${img.isMain ? 'border-red-600 ring-4 ring-red-900/20' : 'border-gray-700 hover:border-gray-500'}`;
+
+                    div.ondblclick = () => {
+                        currentImages.forEach(i => i.isMain = 0);
+                        img.isMain = 1;
+                        renderGallery();
+                        showToast("Đã đặt làm ảnh chính");
+                    };
+
+                    const src = img.file ? URL.createObjectURL(img.file) : optimizeCloudinaryUrl(img.url);
+                    div.innerHTML = `
+                        <img src="${src || 'https://placehold.co/100'}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/100';">
+                        <button type="button" class="absolute top-1 left-1 bg-black/60 hover:bg-red-600 text-white w-6 h-6 rounded-md flex items-center justify-center transition-all backdrop-blur-sm z-20 shadow-lg" 
+                                onclick="event.stopPropagation(); removeImage(${idx})">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                        ${img.isMain ? '<div class="absolute top-0 right-0 bg-yellow-400 text-gray-900 text-[7px] px-1.5 py-0.5 rounded-bl-md font-black uppercase tracking-tighter z-10 shadow-md border-l border-b border-white/20">Ảnh chính</div>' : ''}
+                        <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-end justify-center pb-2 transition-all duration-300 pointer-events-none">
+                            <span class="text-[7px] text-gray-200 font-medium bg-black/40 backdrop-blur-md px-2 py-1 rounded-full uppercase tracking-widest border border-white/10">Nhấp đúp để đặt làm chính</span>
+                        </div>
+                    `;
+                    gallery.appendChild(div);
+                });
+            }
+
+            window.removeImage = (idx) => {
+                currentImages.splice(idx, 1);
+                if (currentImages.length && !currentImages.some(i => i.isMain)) currentImages[0].isMain = 1;
+                renderGallery();
+            };
+
+            document.getElementById('productImageFiles').onchange = (e) => {
+                Array.from(e.target.files).forEach(file => {
+                    currentImages.push({ url: '', isMain: currentImages.length === 0 ? 1 : 0, file: file });
+                });
+                renderGallery();
+                e.target.value = '';
+            };
+
+            // --- SEARCH & FILTER AJAX ---
+            let currentSearchAbortController = null;
+
+            function performSearch(page = 1) {
+                if (currentSearchAbortController) {
+                    currentSearchAbortController.abort();
+                }
+                currentSearchAbortController = new AbortController();
+                const signal = currentSearchAbortController.signal;
+
+                const term = document.getElementById('searchInput').value;
+                urlParams.set('searchTerm', term);
+                urlParams.set('page', page);
+
+                const filterIds = ['fName', 'fSku', 'fOrigin', 'fUnit', 'fCategoryId', 'fSupplierId', 'fStatus', 'fMinPrice', 'fMaxPrice', 'fMinDiscountPercent', 'fMaxDiscountPercent', 'fMinQty', 'fMaxQty'];
+                filterIds.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && el.value) urlParams.set(id, el.value);
+                    else urlParams.delete(id);
+                });
+
+                const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+                window.history.pushState({ path: newUrl }, '', newUrl);
+
+                const tableBody = document.getElementById('tableBody');
+                tableBody.style.opacity = '0.5';
+
+                fetch(newUrl, { signal })
+                    .then(r => r.text())
+                    .then(html => {
+                        const doc = new DOMParser().parseFromString(html, 'text/html');
+                        tableBody.innerHTML = doc.getElementById('tableBody').innerHTML;
+                        tableBody.style.opacity = '1';
+
+                        const newPag = doc.querySelector('.pagination-container');
+                        const pagCont = document.querySelector('.pagination-container');
+                        if (newPag && pagCont) pagCont.innerHTML = newPag.innerHTML;
+
+                        attachRowEvents();
+                        applyColumnConfig();
+                        updateSelectionUI(); 
+                    })
+                    .catch(err => {
+                        if (err.name === 'AbortError') return;
+                        tableBody.style.opacity = '1';
+                        showToast("Lỗi khi tải dữ liệu: " + err.message, 'error');
+                    });
+            }
+
+            const debounce = (fn, d) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), d); }; };
+            document.getElementById('searchInput').oninput = debounce(() => performSearch(1), 300);
+
+            document.getElementById('applyFilterBtn').onclick = () => {
+                document.getElementById('filterPanel').classList.add('hidden');
+                performSearch(1);
+            };
+
+            document.getElementById('resetFilterBtn').onclick = () => {
+                document.querySelectorAll('#filterPanel input, #filterPanel select').forEach(i => i.value = '');
+                performSearch(1);
+            };
+
+            // --- SORTING ---
+            document.querySelectorAll('.sortable-header').forEach(header => {
+                header.onclick = function () {
+                    const col = this.dataset.column;
+                    const currentSort = urlParams.get('sortBy');
+                    const currentOrder = urlParams.get('sortOrder');
+                    const newOrder = (currentSort === col && currentOrder === 'asc') ? 'desc' : 'asc';
+                    urlParams.set('sortBy', col);
+                    urlParams.set('sortOrder', newOrder);
+                    performSearch(1);
+                };
+            });
+
+            // --- EXPORT LOGIC ---
+            document.getElementById('exportBtn').onclick = () => {
+                const count = isAllSelectedAcrossPages ? "Toàn bộ" : document.querySelectorAll('.productCheckbox:checked').length;
+                document.getElementById('exportSelectedCount').innerText = count;
+                document.getElementById('exportModal').classList.remove('hidden');
+            };
+
+            document.querySelectorAll('.export-fmt-btn').forEach(btn => {
+                btn.onclick = function () {
+                    selectedExportFormat = this.dataset.format;
+                    document.querySelectorAll('.export-fmt-btn').forEach(b => {
+                        const active = b.dataset.format === selectedExportFormat;
+                        b.classList.toggle('selected', active);
+                        b.classList.toggle('border-green-500', active);
+                        b.classList.toggle('bg-green-900/20', active);
+                        b.classList.toggle('text-white', active);
+                        b.classList.toggle('border-gray-700/50', !active);
+                        b.classList.toggle('bg-gray-800/50', !active);
+                        b.classList.toggle('text-gray-400', !active);
+                    });
+                };
+            });
+
+            document.getElementById('doExportBtn').onclick = function () {
+                const scope = document.querySelector('input[name="exportScope"]:checked').value;
+                const selectedCheckboxes = document.querySelectorAll('.productCheckbox:checked');
+
+                if (scope === 'selected' && !isAllSelectedAcrossPages && selectedCheckboxes.length === 0) {
+                    return showToast("Vui lòng chọn ít nhất một sản phẩm để xuất dữ liệu!", "error");
+                }
+
+                let url = '';
+                switch (selectedExportFormat) {
+                    case 'excel': url = '/AdminProducts/ExportExcel'; break;
+                    case 'csv': url = '/AdminProducts/ExportCsv'; break;
+                    case 'json': url = '/AdminProducts/ExportJson'; break;
+                    case 'xml': url = '/AdminProducts/ExportXml'; break;
+                }
+
+                const params = new URLSearchParams(urlParams);
+                if (scope === 'selected') {
+                    if (!isAllSelectedAcrossPages) {
+                        const ids = Array.from(selectedCheckboxes).map(cb => cb.dataset.id).join(',');
+                        params.set('ids', ids);
+                    }
+                } else {
+                    params.delete('ids'); 
+                }
+
+                window.location.href = `${url}?${params.toString()}`;
+                document.getElementById('exportModal').classList.add('hidden');
+                showToast(`Đang chuẩn bị file ${selectedExportFormat.toUpperCase()}...`);
+            };
+
+            // --- CRUD ACTIONS ---
+            function attachRowEvents() {
+                document.querySelectorAll('.productCheckbox').forEach(cb => {
+                    cb.onchange = handleCheckboxChange;
+                });
+
+                document.querySelectorAll('.editBtn').forEach(btn => {
+                    btn.onclick = function () {
+                        isEditMode = true;
+                        const d = this.closest('tr').dataset;
+                        document.getElementById('modalTitle').innerText = "Sửa sản phẩm";
+                        document.getElementById('productId').value = d.id;
+                        document.getElementById('productCode').value = d.copySku;
+                        document.getElementById('productName').value = d.copyName;
+                        document.getElementById('productCategory').value = d.copyCategory || '';
+                        document.getElementById('productSupplier').value = d.copySupplier || '';
+                        document.getElementById('productPrice').value = d.copyPrice;
+                        document.getElementById('productDiscountPercent').value = d.copyDiscountPercent || '';
+                        document.getElementById('productType').value = d.copyOrigin;
+                        document.getElementById('productUnit').value = d.copyUnit;
+                        document.getElementById('productQuantity').value = d.copyQty;
+                        document.getElementById('productDescription').value = d.copyDesc || '';
+                        currentImages = JSON.parse(d.copyImages || '[]').map(i => ({ url: i.ImageUrl, isMain: i.IsMain, file: null }));
+                        renderGallery();
+                        document.getElementById('productModal').classList.remove('hidden');
+                    };
+                });
+
+                document.querySelectorAll('.viewBtn').forEach(btn => {
+                    btn.onclick = function () {
+                        const id = this.dataset.id;
+                        fetch(`/AdminProducts/GetDetails?id=${id}`)
+                            .then(r => r.json())
+                            .then(res => {
+                                if (res.success) {
+                                    const d = res.data;
+                                    document.getElementById('detName').innerText = d.name;
+                                    document.getElementById('detSku').innerText = d.sku;
+                                    document.getElementById('detCreatedAt').innerText = d.createdAt;
+                                    document.getElementById('detStock').innerText = d.stock;
+                                    document.getElementById('detUnit').innerText = d.unit || '';
+                                    document.getElementById('detCategory').querySelector('.val').innerText = d.categoryName;
+                                    document.getElementById('detSupplier').querySelector('.val').innerText = d.supplierName;
+                                    document.getElementById('detOrigin').querySelector('.val').innerText = d.origin || 'Đang cập nhật';
+                                    document.getElementById('detDesc').innerText = d.description;
+                                    
+                                    const finalPriceEl = document.getElementById('detFinalPrice');
+                                    const oldPriceEl = document.getElementById('detOldPrice');
+                                    const discountEl = document.getElementById('detDiscountPercent');
+
+                                    if (d.discountPercent > 0) {
+                                        finalPriceEl.innerText = formatMoney(d.finalPrice);
+                                        oldPriceEl.innerText = formatMoney(d.price);
+                                        discountEl.innerText = `-${d.discountPercent}%`;
+                                        discountEl.classList.remove('hidden');
+                                    } else {
+                                        finalPriceEl.innerText = formatMoney(d.price);
+                                        oldPriceEl.innerText = '';
+                                        discountEl.innerText = '';
+                                        discountEl.classList.add('hidden');
+                                    }
+
+                                    const badge = document.getElementById('detStatusBadge');
+                                    badge.innerText = d.status == 1 ? 'Hoạt động' : 'Ngừng';
+                                    badge.className = `px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${d.status == 1 ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}`;
+
+                                    const mainImg = document.getElementById('detMainImg');
+                                    const grid = document.getElementById('detImgGrid');
+                                    const imageCount = document.getElementById('detImageCount');
+                                    grid.innerHTML = '';
+                                    
+                                    if (d.images && d.images.length > 0) {
+                                        mainImg.src = d.images[0];
+                                        mainImg.onerror = function() { this.onerror=null; this.src='https://placehold.co/700x700?text=No+Image'; };
+                                        imageCount.innerText = `${d.images.length} ảnh`;
+
+                                        d.images.forEach((img, idx) => {
+                                            const thumb = document.createElement('button');
+                                            thumb.type = 'button';
+                                            thumb.className = `aspect-square rounded-lg bg-gray-800 border-2 ${idx === 0 ? 'border-blue-500 ring-1 ring-blue-400/60' : 'border-gray-700'} overflow-hidden hover:border-blue-500 transition-all`;
+                                            thumb.innerHTML = `<img src="${img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/120x120?text=No+Image';">`;
+                                            thumb.onclick = () => {
+                                                mainImg.src = img;
+                                                grid.querySelectorAll('button').forEach(el => {
+                                                    el.classList.remove('border-blue-500', 'ring-1', 'ring-blue-400/60');
+                                                    if (!el.classList.contains('border-gray-700')) el.classList.add('border-gray-700');
+                                                });
+                                                thumb.classList.remove('border-gray-700');
+                                                thumb.classList.add('border-blue-500', 'ring-1', 'ring-blue-400/60');
+                                            };
+                                            grid.appendChild(thumb);
+                                        });
+                                    } else {
+                                        mainImg.src = 'https://placehold.co/700x700?text=No+Image';
+                                        mainImg.onerror = function() { this.onerror=null; this.src='https://placehold.co/700x700?text=No+Image'; };
+                                        imageCount.innerText = '0 ảnh';
+                                    }
+
+                                    document.getElementById('detEditBtn').onclick = () => {
+                                        document.getElementById('detailsModal').classList.add('hidden');
+                                        const row = document.querySelector(`tr[data-id="${id}"]`);
+                                        if (row) row.querySelector('.editBtn').click();
+                                    };
+
+                                    document.getElementById('detailsModal').classList.remove('hidden');
+                                } else {
+                                    showToast(res.message, 'error');
+                                }
+                            });
+                    };
+                });
+
+                document.querySelectorAll('.deleteSingleBtn').forEach(btn => {
+                    btn.onclick = function () {
+                        deleteType = 'single';
+                        deleteTarget = this.dataset.id;
+                        document.getElementById('deleteConfirmMessage').innerText = "Bạn có chắc chắn muốn xóa sản phẩm này? Hành động này sẽ bao gồm việc xóa toàn bộ hình ảnh liên quan.";
+                        document.getElementById('deleteConfirmModal').classList.remove('hidden');
+                    };
+                });
+
+                document.querySelectorAll('.copySingleBtn').forEach(btn => {
+                    btn.onclick = function (e) {
+                        e.stopPropagation();
+                        const d = this.closest('tr').dataset;
+                        pushToClipboard([{
+                            sku: d.copySku, name: d.copyName, categoryId: d.copyCategory, supplierId: d.copySupplier, price: d.copyPrice,
+                            discountPercent: d.copyDiscountPercent, origin: d.copyOrigin, unit: d.copyUnit,
+                            qty: d.copyQty, images: JSON.parse(d.copyImages || '[]'), desc: d.copyDesc
+                        }]);
+                        showToast('Đã copy dữ liệu sản phẩm');
+                    };
+                });
+            }
+
+            document.getElementById('confirmDeleteBtn').onclick = () => {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const url = deleteType === 'single' ? `/AdminProducts/Delete?id=${deleteTarget}` : '/AdminProducts/DeleteSelected';
+                const body = deleteType === 'single' ? null : JSON.stringify(deleteTarget);
+                const headers = { 'RequestVerificationToken': token };
+                if (deleteType === 'bulk') headers['Content-Type'] = 'application/json';
+
+                document.getElementById('confirmDeleteBtn').disabled = true;
+                document.getElementById('confirmDeleteBtn').innerText = "Đang xử lý...";
+
+                fetch(url, { method: 'POST', headers: headers, body: body })
+                    .then(r => r.json()).then(res => {
+                        document.getElementById('confirmDeleteBtn').disabled = false;
+                        document.getElementById('confirmDeleteBtn').innerText = "Đồng ý xóa";
+                        if (res.success) {
+                            showToast(res.message);
+                            performSearch(urlParams.get('page') || 1);
+                        }
+                        else showToast(res.message, 'error');
+                        document.getElementById('deleteConfirmModal').classList.add('hidden');
+                    });
+            };
+
+            document.getElementById('deleteSelectedBtn').onclick = () => {
+                const ids = Array.from(document.querySelectorAll('.productCheckbox:checked')).map(cb => parseInt(cb.dataset.id));
+                if (!ids.length && !isAllSelectedAcrossPages) return showToast("Vui lòng chọn ít nhất một sản phẩm!", "error");
+
+                deleteType = 'bulk';
+                deleteTarget = ids;
+                const msg = isAllSelectedAcrossPages ? "Xóa TOÀN BỘ sản phẩm khớp với bộ lọc?" : `Xóa ${ids.length} sản phẩm đã chọn?`;
+                document.getElementById('deleteConfirmMessage').innerText = msg;
+                document.getElementById('deleteConfirmModal').classList.remove('hidden');
+            };
+
+            document.getElementById('copySelectedBtn').onclick = () => {
+                if (isAllSelectedAcrossPages) {
+                    const btn = document.getElementById('copySelectedBtn');
+                    const originalText = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = `<svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Đang lấy...</span>`;
+
+                    const params = new URLSearchParams(urlParams);
+                    fetch(`/AdminProducts/CopyAll?${params.toString()}`)
+                        .then(r => r.json())
+                        .then(res => {
+                            btn.disabled = false;
+                            btn.innerHTML = originalText;
+                            if (res.success && res.products.length) {
+                                pushToClipboard(res.products);
+                                showToast(`Đã copy thành công TOÀN BỘ ${res.products.length} sản phẩm`);
+                            } else {
+                                showToast("Không có dữ liệu để copy", "error");
+                            }
+                        })
+                        .catch(err => {
+                            btn.disabled = false; btn.innerHTML = originalText;
+                            showToast("Lỗi: " + err.message, "error");
+                        });
+                    return;
+                }
+
+                const snaps = Array.from(document.querySelectorAll('.productCheckbox:checked')).map(cb => {
+                    const d = cb.closest('tr').dataset;
+                    return {
+                        sku: d.copySku, name: d.copyName, categoryId: d.copyCategory, supplierId: d.copySupplier, price: d.copyPrice,
+                        discountPercent: d.copyDiscountPercent, origin: d.copyOrigin, unit: d.copyUnit,
+                        qty: d.copyQty, images: JSON.parse(d.copyImages || '[]'), desc: d.copyDesc
+                    };
+                });
+                if (!snaps.length) return showToast("Vui lòng chọn sản phẩm cần copy!", "error");
+                pushToClipboard(snaps);
+                showToast(`Đã copy thành công ${snaps.length} sản phẩm`);
+            };
+
+            // --- FORM SUBMIT ---
+            document.getElementById('productForm').onsubmit = function (e) {
+                e.preventDefault();
+                const btn = this.querySelector('button[type="submit"]');
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerText = "Đang lưu...";
+
+                const formData = new FormData(this);
+                const keep = currentImages.filter(i => !i.file).map(i => i.url);
+                formData.set('existingImagesJson', JSON.stringify(keep));
+                currentImages.filter(i => i.file).forEach(i => formData.append('imageFiles', i.file));
+                const mainIdx = currentImages.findIndex(i => i.isMain);
+                formData.set('mainImageIndex', mainIdx >= 0 ? mainIdx : 0);
+
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                fetch(isEditMode ? '/AdminProducts/Update' : '/AdminProducts/Create', {
+                    method: 'POST', headers: { 'RequestVerificationToken': token }, body: formData
+                })
+                    .then(r => r.json()).then(res => {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                        if (res.success) {
+                            showToast(isEditMode ? "Cập nhật thành công!" : "Thêm mới thành công!");
+                            document.getElementById('productModal').classList.add('hidden');
+                            performSearch(urlParams.get('page') || 1);
+                        }
+                        else showToast(res.message, 'error');
+                    })
+                    .catch(err => {
+                        btn.disabled = false; btn.innerHTML = originalText;
+                        showToast("Lỗi hệ thống: " + err.message, 'error');
+                    });
+            };
+
+            // --- IMPORT LOGIC ---
+            const importInput = document.getElementById('importFileInput');
+            const filePreview = document.getElementById('filePreview');
+            const dropzone = document.getElementById('importDropzone');
+
+            document.getElementById('importBtn').onclick = () => {
+                const resBox = document.getElementById('importResultBox');
+                resBox.classList.add('hidden'); resBox.innerHTML = '';
+                importInput.value = ''; filePreview.classList.add('hidden');
+                dropzone.classList.remove('hidden'); document.getElementById('importModal').classList.remove('hidden');
+            };
+
+            importInput.onchange = function (e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const ext = file.name.split('.').pop().toUpperCase();
+                    document.getElementById('fileName').innerText = file.name;
+                    document.getElementById('fileSize').innerText = (file.size / 1024).toFixed(1) + ' KB';
+                    document.getElementById('fileIcon').innerText = ext;
+                    dropzone.classList.add('hidden'); filePreview.classList.remove('hidden');
+                }
+            };
+
+            document.getElementById('removeImportFile').onclick = (e) => {
+                e.stopPropagation(); importInput.value = '';
+                filePreview.classList.add('hidden'); dropzone.classList.remove('hidden');
+            };
+
+            document.getElementById('importSubmitBtn').onclick = function () {
+                const file = importInput.files[0];
+                if (!file) return showToast("Vui lòng chọn file!", "error");
+
+                const btn = this; const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = `<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Đang xử lý...`;
+
+                const formData = new FormData(); formData.append('file', file);
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const box = document.getElementById('importResultBox');
+
+                box.classList.remove('hidden'); box.innerHTML = `Đang xử lý dữ liệu...`;
+
+                fetch('/AdminProducts/Import', { method: 'POST', headers: { 'RequestVerificationToken': token }, body: formData })
+                    .then(r => r.json()).then(res => {
+                        btn.disabled = false; btn.innerHTML = originalText;
+                        if (res.success) {
+                            box.className = "mt-4 p-4 bg-green-900/20 text-green-400 border border-green-700/50 rounded-xl relative";
+                            box.innerHTML = `<button type="button" class="absolute top-2 right-2 text-green-400 hover:text-white" onclick="this.parentElement.classList.add('hidden')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                            <div class="font-bold pr-6">${res.message}</div>`;
+                            showToast(res.message); performSearch(1);
+                        }
+                        else {
+                            box.className = "mt-4 p-4 bg-red-900/20 text-red-400 border border-red-700/50 rounded-xl relative max-h-60 overflow-y-auto scrollbar-thin";
+                            box.innerHTML = `<button type="button" class="absolute top-2 right-2 text-red-400 hover:text-white" onclick="this.parentElement.classList.add('hidden')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                            <div class="font-bold mb-2 pr-6">${res.message}</div><div class="space-y-1">${(res.errors || []).map(e => `<div class="text-[11px]">• ${e}</div>`).join('')}</div>`;
+                        }
+                    })
+                    .catch(err => {
+                        btn.disabled = false; btn.innerHTML = originalText;
+                        box.className = "mt-4 p-4 bg-red-900/20 text-red-400 border border-red-700/50 rounded-xl relative";
+                        box.innerHTML = `<button type="button" class="absolute top-2 right-2 text-red-400 hover:text-white" onclick="this.parentElement.classList.add('hidden')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                        <div class="pr-6">Lỗi: ${err.message}</div>`;
+                    });
+            };
+
+            // --- COLUMN CONFIG ---
+            const defaultCols = [
+                { id: 'checkbox', name: 'Chọn', visible: true }, { id: 'stt', name: 'STT', visible: true }, 
+                { id: 'column-code', name: 'Mã SKU', visible: true }, { id: 'column-name', name: 'Tên sản phẩm', visible: true }, 
+                { id: 'column-category', name: 'Danh mục', visible: true }, { id: 'column-supplier', name: 'Nhà cung cấp', visible: true },
+                { id: 'column-price', name: 'Giá gốc', visible: true }, { id: 'column-discount', name: 'Giảm (%)', visible: true },
+                { id: 'column-finalprice', name: 'Sau giảm', visible: true },
+                { id: 'column-type', name: 'Xuất xứ', visible: true }, { id: 'column-unit', name: 'Đơn vị', visible: true }, 
+                { id: 'column-quantity', name: 'Tồn kho', visible: true }, { id: 'column-status', name: 'Trạng thái', visible: true },
+                { id: 'column-image', name: 'Ảnh', visible: true }, { id: 'actions', name: 'Hành động', visible: true }
+            ];
+            let colCfg = JSON.parse(localStorage.getItem('productColumnConfig')) || defaultCols;
+
+            const applyColumnConfig = () => {
+                const table = document.getElementById('productTable');
+                if (!table) return;
+                const rows = table.querySelectorAll('tr');
+                rows.forEach(row => {
+                    colCfg.forEach(c => {
+                        const cell = row.querySelector(`[data-col-id="${c.id}"]`);
+                        if (cell) { cell.style.display = c.visible ? '' : 'none'; row.appendChild(cell); }
+                    });
+                });
+            };
+
+            let sortableInstance = null;
+            document.getElementById('columnConfigBtn').onclick = () => {
+                const list = document.getElementById('columnList');
+                if (!list) return; list.innerHTML = '';
+                colCfg.forEach((c) => {
+                    const d = document.createElement('div');
+                    d.className = "flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl hover:bg-gray-800 transition-colors border border-gray-700/30 cursor-move group";
+                    d.dataset.id = c.id;
+                    d.innerHTML = `<div class="text-gray-500 group-hover:text-gray-300"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M7 2a2 2 0 11.001 3.999A2 2 0 017 2zm0 6a2 2 0 11.001 3.999A2 2 0 017 8zm0 6a2 2 0 11.001 3.999A2 2 0 017 14zm6-12a2 2 0 11.001 3.999A2 2 0 0113 2zm0 6a2 2 0 11.001 3.999A2 2 0 0113 8zm0 6a2 2 0 11.001 3.999A2 2 0 0113 14z" /></svg></div><span class="flex-1 text-sm font-medium theme-contrast">${c.name}</span><input type="checkbox" ${c.visible ? 'checked' : ''} class="col-visibility w-5 h-5 rounded accent-blue-600 cursor-pointer">`;
+                    list.appendChild(d);
+                });
+                if (sortableInstance) sortableInstance.destroy();
+                sortableInstance = new Sortable(list, { animation: 150, ghostClass: 'bg-blue-600/10' });
+                document.getElementById('columnConfigModal').classList.remove('hidden');
+            };
+
+            document.getElementById('saveColumnsBtn').onclick = () => {
+                const listItems = document.querySelectorAll('#columnList > div');
+                const newCfg = [];
+                listItems.forEach(item => {
+                    const id = item.dataset.id;
+                    const visible = item.querySelector('.col-visibility').checked;
+                    const originalCol = defaultCols.find(dc => dc.id === id) || { name: 'N/A' };
+                    newCfg.push({ id, name: originalCol.name, visible });
+                });
+                colCfg = newCfg; localStorage.setItem('productColumnConfig', JSON.stringify(colCfg));
+                applyColumnConfig(); document.getElementById('columnConfigModal').classList.add('hidden');
+                showToast("Đã lưu cấu hình cột");
+            };
+
+            document.getElementById('resetColumnsBtn').onclick = () => {
+                colCfg = JSON.parse(JSON.stringify(defaultCols)); localStorage.removeItem('productColumnConfig');
+                applyColumnConfig(); document.getElementById('columnConfigModal').classList.add('hidden');
+                showToast("Đã khôi phục cài đặt gốc");
+            };
+
+            // --- UI EVENTS ---
+            document.getElementById('addBtn').onclick = () => {
+                isEditMode = false; document.getElementById('modalTitle').innerText = "Thêm sản phẩm mới";
+                document.getElementById('productForm').reset(); document.getElementById('productId').value = '';
+                currentImages = []; renderGallery(); document.getElementById('productModal').classList.remove('hidden');
+            };
+
+            document.querySelectorAll('.close-modal').forEach(b => {
+                b.onclick = () => b.closest('.fixed').classList.add('hidden');
+            });
+
+            document.getElementById('actionsBtn').onclick = (e) => {
+                e.stopPropagation(); document.getElementById('actionsMenu').classList.toggle('hidden');
+            };
+
+            document.addEventListener('click', () => {
+                document.getElementById('actionsMenu')?.classList.add('hidden');
+                document.getElementById('pasteMenu')?.classList.add('hidden');
+            });
+
+            document.getElementById('toggleFilterBtn').onclick = () => {
+                document.getElementById('filterPanel').classList.toggle('hidden');
+            };
+
+            const pagContainer = document.querySelector('.pagination-container');
+            if (pagContainer) {
+                pagContainer.onclick = (e) => {
+                    const btn = e.target.closest('button[data-page]');
+                    if (btn) performSearch(btn.dataset.page);
+                };
+                pagContainer.onchange = (e) => {
+                    if (e.target.id === 'goToPageInput') {
+                        let v = parseInt(e.target.value);
+                        const max = parseInt(e.target.max);
+                        if (isNaN(v) || v < 1) v = 1; if (v > max) v = max;
+                        e.target.value = v; performSearch(v);
+                    }
+                };
+            }
+
+            // --- KEYBOARD SHORTCUTS ---
+            document.addEventListener('keydown', function (e) {
+                const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
+                
+                if (e.key === 'Escape') {
+                    const openModals = document.querySelectorAll('.fixed:not(.hidden)');
+                    if (openModals.length > 0) {
+                        openModals.forEach(m => m.classList.add('hidden'));
+                    } else if (inInput) {
+                        document.activeElement.blur();
+                    }
+                }
+
+                if (e.ctrlKey && e.key.toLowerCase() === 's') {
+                    const modal = document.getElementById('productModal');
+                    if (!modal.classList.contains('hidden')) {
+                        e.preventDefault();
+                        document.getElementById('productForm')?.requestSubmit();
+                    }
+                }
+
+                if (e.altKey) {
+                    const map = { 
+                        'n': 'addBtn', 
+                        'a': 'actionsBtn', 
+                        'f': 'toggleFilterBtn', 
+                        's': 'searchInput', 
+                        'i': 'importBtn', 
+                        'e': 'exportBtn', 
+                        'k': 'copySelectedBtn', 
+                        'd': 'deleteSelectedBtn',
+                        'r': 'resetFilterBtn',
+                        'c': 'columnConfigBtn',
+                        't': 'themeToggle'
+                    };
+                    
+                    const targetId = map[e.key.toLowerCase()];
+                    if (targetId) {
+                        const btn = document.getElementById(targetId);
+                        if (btn) {
+                            e.preventDefault();
+                            if (targetId === 'searchInput') btn.focus();
+                            else btn.click();
+                        }
+                    }
+                }
+
+                if (!inInput && e.key === '/') {
+                    e.preventDefault();
+                    document.getElementById('searchInput').focus();
+                }
+            });
+
+            // INITIALIZATION
+            updateClipboardBadge();
+            attachRowEvents();
+            applyColumnConfig();
+        });
+    </script>
+}

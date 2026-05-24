@@ -1,0 +1,442 @@
+@using System.Text.Json
+@model FruitShop.ViewModels.InventoryViewModel
+@{
+    ViewData["Title"] = "Quản lý Kho hàng";
+}
+
+<link rel="stylesheet" href="~/css/animations.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/products.css" asp-append-version="true" />
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&family=Plus+Jakarta+Sans:wght@400;500;600;800&display=swap" rel="stylesheet">
+
+<style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-body); color: var(--text-main); }
+    h1, h2, h3, .modal-title { font-family: 'Inter', sans-serif !important; font-size: 16px !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; }
+    label.uppercase, .label-caps { font-family: 'Inter', sans-serif !important; font-size: 11px !important; font-weight: 700 !important; letter-spacing: 0.05em !important; color: var(--text-muted); }
+    
+    .inventory-table thead tr { background-color: var(--bg-input) !important; border-bottom: 1px solid var(--border-color); }
+    .table-text-sm { font-size: 13px !important; }
+    .dark-card { background-color: var(--bg-card); border: 1px solid var(--border-color); }
+    .dark-input { background-color: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); }
+    
+    .modal-solid { background-color: var(--bg-card) !important; border: 1px solid var(--border-color); box-shadow: var(--shadow-md); opacity: 1 !important; }
+    .dark-mode .modal-solid { background-color: #0f172a !important; }
+
+    #toastContainer { z-index: 9999 !important; }
+
+    .sticky-col-right { position: sticky; right: 0; background-color: var(--bg-card); z-index: 10; border-left: 1px solid var(--border-color); }
+    .table-row:hover .sticky-col-right { background-color: rgba(59, 130, 246, 0.05) !important; }
+    
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+
+    .inventory-table tbody tr { border-bottom: 1px solid var(--border-color); transition: all 0.2s; }
+    .inventory-table tbody tr:hover { background-color: rgba(59, 130, 246, 0.05); }
+
+    .receipt-step-title { font-family: 'Inter', sans-serif !important; font-size: 15px !important; font-weight: 800 !important; letter-spacing: 0.04em !important; color: var(--text-main) !important; }
+    .receipt-list-title { font-family: 'Inter', sans-serif !important; font-size: 24px !important; font-weight: 800 !important; letter-spacing: -0.02em !important; line-height: 1.05 !important; color: var(--text-main) !important; }
+    .receipt-count-badge { background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(34, 197, 94, 0.08)) !important; color: #22c55e !important; border: 1px solid rgba(34, 197, 94, 0.35) !important; box-shadow: 0 8px 18px rgba(34, 197, 94, 0.10); }
+    .receipt-total-title { font-family: 'Inter', sans-serif !important; font-size: 18px !important; font-weight: 800 !important; letter-spacing: 0.03em !important; color: var(--text-main) !important; }
+    .receipt-search-panel { background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(71, 85, 105, 0.95); box-shadow: 0 18px 40px rgba(15, 23, 42, 0.28); }
+    .receipt-search-item { background: rgba(30, 41, 59, 0.98); border: 1px solid rgba(71, 85, 105, 0.9); color: #e2e8f0; }
+    .receipt-search-item:hover { background: rgba(37, 99, 235, 0.14); border-color: rgba(59, 130, 246, 0.55); }
+    
+    .shadow-text { text-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+</style>
+
+@Html.AntiForgeryToken()
+
+<div class="min-h-screen pt-0 px-6 pb-20">
+    <!-- Header & Statistics -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-6">
+        <div>
+            <h1 class="theme-contrast tracking-tight text-2xl font-bold">Quản Lý Kho Hàng</h1>
+            <p class="text-gray-500 text-[11px] mt-0.5 uppercase font-bold tracking-[0.15em]">Lịch sử luân chuyển & Tồn kho</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="px-6 py-4 dark-card rounded-2xl flex items-center gap-5">
+                <div class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400 border border-green-500/10"><i class="bi bi-box-arrow-in-down text-xl"></i></div>
+                <div><span class="label-caps block">Nhập tháng này</span><span class="text-xl font-bold theme-contrast">@Model.TotalImportMonth</span></div>
+            </div>
+            <div class="px-6 py-4 dark-card rounded-2xl flex items-center gap-5">
+                <div class="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400 border border-red-500/10"><i class="bi bi-box-arrow-up text-xl"></i></div>
+                <div><span class="label-caps block">Xuất tháng này</span><span class="text-xl font-bold theme-contrast">@Model.TotalExportMonth</span></div>
+            </div>
+            <div class="px-6 py-4 dark-card rounded-2xl flex items-center gap-5 border-yellow-500/20">
+                <div class="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-400 border border-yellow-500/10"><i class="bi bi-exclamation-triangle text-xl"></i></div>
+                <div><span class="label-caps block">Cảnh báo tồn</span><span class="text-xl font-bold theme-contrast">@Model.LowStockAlertCount</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Toolbar -->
+    <div class="dark-card p-6 mb-6 rounded-2xl">
+        <div class="flex flex-col lg:flex-row gap-4 items-center">
+            <div class="relative flex-1 group">
+                <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="bi bi-search text-gray-500 text-sm group-focus-within:text-blue-400 transition-colors"></i>
+                </span>
+                <input type="text" id="searchInput" placeholder="Tìm kiếm theo mã phiếu, ghi chú..." class="w-full pl-11 pr-4 py-3 dark-input rounded-xl text-sm focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="@ViewData["SearchTerm"]" onkeypress="handleSearch(event)" />
+            </div>
+            <select id="typeFilter" class="dark-input px-5 py-3 rounded-xl text-sm text-gray-400 cursor-pointer min-w-[180px]" onchange="applyFilter()">
+                <option value="">Tất cả loại phiếu</option>
+                <option value="Import" selected="@(ViewData["Type"]?.ToString() == "Import")">Phiếu Nhập</option>
+                <option value="Export" selected="@(ViewData["Type"]?.ToString() == "Export")">Phiếu Xuất</option>
+            </select>
+            <div class="flex gap-2">
+                <button type="button" id="exportInventoryBtn" class="p-3 bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-xl border border-emerald-500/20 transition-all flex items-center gap-2" title="Xuất báo cáo tồn kho hiện tại">
+                    <i class="bi bi-clipboard-data-fill text-lg"></i> <span class="text-[10px] font-black uppercase tracking-wider">Báo cáo tồn</span>
+                </button>
+                <div class="w-[1px] h-10 bg-gray-700/50 mx-1"></div>
+                <button type="button" id="exportAllReceiptsBtn" class="p-3 bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white rounded-xl border border-blue-500/20 transition-all flex items-center gap-2" title="Xuất toàn bộ phiếu kho">
+                    <i class="bi bi-file-earmark-spreadsheet-fill text-lg"></i> <span class="text-[10px] font-black uppercase tracking-wider">Xuất tất cả phiếu</span>
+                </button>
+                <button type="button" id="exportSelectedBtn" class="hidden p-3 bg-indigo-600 text-white hover:bg-indigo-500 rounded-xl transition-all animate-fade-in flex items-center gap-2 shadow-lg" title="Xuất phiếu đã chọn">
+                    <i class="bi bi-check2-all text-lg"></i> <span class="text-[10px] font-black uppercase tracking-wider">Xuất chọn (<span id="selectedCount">0</span>)</span>
+                </button>
+            </div>
+            <div class="flex gap-2 ml-auto">
+                <button type="button" id="importStockBtn" class="bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg"><i class="bi bi-plus-lg mr-2"></i> Nhập Kho</button>
+                <button type="button" id="exportStockBtn" class="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg"><i class="bi bi-dash-lg mr-2"></i> Xuất Kho</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="dark-card overflow-hidden rounded-2xl shadow-xl">
+        <table class="w-full inventory-table">
+            <thead>
+                <tr class="table-header">
+                    <th class="px-4 py-4 text-center"><input type="checkbox" id="selectAll" class="w-4 h-4 rounded border-gray-700 bg-gray-800 text-blue-600 focus:ring-blue-500" /></th>
+                    <th class="px-6 py-4 text-left label-caps">Mã Phiếu</th>
+                    <th class="px-6 py-4 text-left label-caps">Loại Giao Dịch</th>
+                    <th class="px-6 py-4 text-center theme-contrast">Số Mặt Hàng</th>
+                    <th class="px-6 py-4 text-center theme-contrast">Tổng Số Lượng</th>
+                    <th class="px-6 py-4 text-left label-caps">Thời Gian Lập</th>
+                    <th class="px-6 py-4 text-center sticky-col-right label-caps theme-contrast">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                @if (Model.Receipts.Any()) {
+                    foreach (var item in Model.Receipts) {
+                        <tr class="table-row text-base transition-colors" data-id="@item.ReceiptCode">
+                            <td class="px-4 py-4 text-center"><input type="checkbox" class="receipt-checkbox w-4 h-4 rounded border-gray-700 bg-gray-800 text-blue-600 focus:ring-blue-500" value="@item.ReceiptCode" /></td>
+                            <td class="px-6 py-4 font-mono font-bold text-blue-400 tracking-tight text-[15px]">#@item.ReceiptCode</td>
+                            <td class="px-6 py-4">
+                                @if (item.Type == "Import") { <span class="px-3 py-1.5 rounded-full bg-green-900/30 text-green-400 text-xs font-bold uppercase border border-green-500/20">Nhập kho</span> }
+                                else { <span class="px-3 py-1.5 rounded-full bg-red-900/30 text-red-400 text-xs font-bold uppercase border border-red-500/20">Xuất kho</span> }
+                            </td>
+                            <td class="px-6 py-4 text-center theme-contrast font-medium text-[15px]">@item.TotalProducts</td>
+                            <td class="px-6 py-4 text-center font-bold theme-contrast text-lg">@item.TotalQuantity</td>
+                            <td class="px-6 py-4 text-gray-500 font-mono text-[15px]">@item.CreatedAt.ToString("HH:mm - dd/MM/yyyy")</td>
+                            <td class="px-6 py-4 text-center sticky-col-right">
+                                <button type="button" class="viewDetailBtn p-2 rounded-lg text-blue-400 hover:bg-blue-400/10 transition-all" data-code="@item.ReceiptCode" data-note="@item.OriginalNote" title="Xem chi tiết">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                } else {
+                    <tr><td colspan="7" class="px-6 py-20 text-center text-gray-500 italic text-base">Không tìm thấy dữ liệu phiếu kho nào</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex justify-center mt-10">
+        @if (Model.TotalPages > 1) {
+            <div class="flex items-center gap-2">
+                @for (int i = 1; i <= Model.TotalPages; i++) {
+                    <button type="button" onclick="goToPage(@i)" class="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold transition-all @(i == Model.CurrentPage ? "bg-blue-600 text-white shadow-xl" : "bg-gray-800 text-gray-400 hover:bg-gray-700")">@i</button>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal Chi Tiết: Cinematic Ultra-Wide Frame -->
+<div id="detailModal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-2 md:p-12 backdrop-blur-2xl">
+    <div class="dark-card w-full max-w-7xl max-h-[94vh] overflow-hidden  flex flex-col animate-zoom-in shadow-[0_0_120px_rgba(0,0,0,0.6)] border border-gray-700/40">
+        <div class="sticky top-0 bg-gray-900/80 backdrop-blur-xl px-12 py-8 border-b border-gray-700/50 flex items-center justify-between z-10">
+            <h3 class="text-2xl font-black text-white flex items-center gap-5 tracking-tighter uppercase theme-contrast">
+                <i class="bi bi-file-earmark-bar-graph text-blue-500 text-5xl"></i> Chi tiết Phiếu kho: <span id="detTitleCode" class="text-blue-400 font-mono theme-contrast"></span>
+            </h3>
+            <button onclick="closeModal('detailModal')" class="w-14 h-14 rounded-full bg-gray-800/50 hover:bg-red-600 hover:rotate-90 text-white flex items-center justify-center transition-all duration-300 border border-gray-600 shadow-lg"><i class="bi bi-x-lg text-2xl"></i></button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-12 scrollbar-thin space-y-12">
+            <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
+                <div class="bg-blue-600/10 p-10 rounded-[2.5rem] border-2 border-blue-500/20 shadow-xl flex flex-col justify-center xl:col-span-1">
+                    <label class="text-xl uppercase font-black text-blue-400 tracking-[0.4em] mb-4 block opacity-70">Loại giao dịch</label>
+                    <div id="detTypeLabel"></div>
+                </div>
+                <div class="bg-gray-800/30 p-10 rounded-[2.5rem] border border-gray-700/30 xl:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <label class="text-xl uppercase font-black text-gray-500 tracking-[0.4em] mb-4 block">Thời gian hệ thống xác nhận</label>
+                        <p id="detCreatedAt" class="text-3xl font-black theme-contrast tracking-tight text-white"></p>
+                    </div>
+                    <div>
+                        <label class="text-xl uppercase font-black text-gray-500 tracking-[0.4em] mb-4 block">Ghi chú vận hành / Lý do</label>
+                        <p id="detNote" class="text-2xl font-bold text-blue-100/80 italic leading-snug"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="border-2 border-gray-700/40 rounded-[3rem] overflow-hidden shadow-2xl bg-black/40">
+                <div class="max-h-[500px] overflow-y-auto scrollbar-thin">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="label-caps bg-gray-900/95 backdrop-blur-md">
+                                <th class="px-12 py-8 text-left sticky top-0 bg-gray-900 z-30 border-b border-gray-700 text-sm tracking-[0.3em] uppercase font-black">Danh mục Sản phẩm & SKU</th>
+                                <th class="px-12 py-8 text-center sticky top-0 bg-gray-900 z-30 border-b border-gray-700 text-sm tracking-[0.3em] uppercase font-black">Số lượng (SL)</th>
+                                <th class="px-12 py-8 text-right sticky top-0 bg-gray-900 z-30 border-b border-gray-700 text-sm tracking-[0.3em] uppercase font-black">Giá trị thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detItemsList" class="text-gray-100 divide-y-2 divide-gray-800/30"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="flex flex-col md:flex-row justify-between items-end md:items-center px-12 py-10 bg-gradient-to-br from-green-500/10 to-emerald-500/5 rounded-[3rem] border-2 border-green-500/20 shadow-inner">
+                <div class="text-left hidden lg:block">
+                    <p class="text-gray-400 text-sm font-black uppercase tracking-[0.3em] mb-2">Warehouse Management Report</p>
+                    <p class="text-gray-500 text-xs font-bold italic">* Giá trị được tính toán tự động dựa trên giá niêm yết hiện tại của hệ thống</p>
+                </div>
+                <div class="flex flex-col items-end">
+                    <label class="text-xs uppercase font-black text-green-500/70 tracking-[0.5em] mb-2 block">TỔNG GIÁ TRỊ TOÀN PHIẾU</label>
+                    <span class="text-5xl font-black text-green-400 theme-contrast tracking-tighter leading-none" id="detTotalPrice">0đ</span>
+                </div>
+            </div>
+        </div>
+        <div class="px-12 py-10 border-t border-gray-700/50 bg-gray-900/50">
+            <button onclick="closeModal('detailModal')" class="w-full py-8 bg-gradient-to-r from-blue-800 via-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-700 text-white rounded-[2rem] text-2xl font-black uppercase tracking-[0.4em] transition-all duration-500 shadow-[0_25px_60px_rgba(37,99,235,0.4)] border border-blue-400/30 transform hover:-translate-y-2 active:scale-[0.97]">Đóng chi tiết phiếu</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Lập Phiếu -->
+<div id="createReceiptModal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+    <div class="dark-card w-full max-w-4xl max-h-[84vh] overflow-hidden rounded-[1.5rem] flex flex-col animate-fade-in shadow-2xl border border-gray-700">
+        <div class="px-7 py-5 border-b border-gray-700 flex items-center justify-between bg-black/15">
+            <div class="flex items-center gap-4">
+                <div id="createModalIconBox" class="w-12 h-12 rounded-2xl flex items-center justify-center border border-gray-700"><i id="createModalIcon" class="text-xl"></i></div>
+                <div><h3 class="modal-title text-gray-100 text-base" id="createModalTitle">Lập Phiếu Kho</h3><p class="label-caps mt-1">Warehouse Management System</p></div>
+            </div>
+            <button type="button" onclick="closeModal('createReceiptModal')" class="p-2 text-gray-400 hover:text-white transition-all"><i class="bi bi-x-lg text-lg"></i></button>
+        </div>
+        <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+            <div class="w-full md:w-[42%] p-6 border-r border-gray-700 bg-black/10 flex flex-col">
+                <div class="mb-5">
+                    <div class="receipt-step-title mb-2.5 ml-1">1. Tìm sản phẩm</div>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="bi bi-search text-gray-500 text-sm"></i></span>
+                        <input type="text" id="productSearchInput" class="w-full dark-input p-3.5 pl-10 rounded-2xl outline-none focus:ring-blue-500 text-sm text-gray-100" placeholder="Tên sản phẩm hoặc SKU..." />
+                        <div id="searchResults" class="hidden receipt-search-panel absolute top-full left-0 w-full mt-2 rounded-2xl z-[100] max-h-56 overflow-y-auto scrollbar-thin p-2"></div>
+                    </div>
+                </div>
+                <div class="mb-5">
+                    <div class="receipt-step-title mb-2.5 ml-1">2. Lý do / Ghi chú</div>
+                    <textarea id="receiptNote" rows="3" class="w-full dark-input p-3.5 rounded-2xl text-sm outline-none focus:border-blue-500" placeholder="Nhập lý do thực hiện..."></textarea>
+                </div>
+            </div>
+            <div class="w-full md:w-[58%] p-6 flex flex-col bg-black/5">
+                <div class="flex items-center justify-between mb-5">
+                    <h4 class="receipt-list-title text-blue-400">Danh sách chờ</h4>
+                    <span id="itemCountBadge" class="receipt-count-badge px-3 py-1 rounded-full uppercase tracking-widest text-[11px] font-bold">0 Mặt hàng</span>
+                </div>
+                <div id="selectedProductsList" class="flex-1 overflow-y-auto scrollbar-thin space-y-2.5 pr-1"></div>
+                <div class="mt-6 pt-5 border-t border-gray-700">
+                    <div class="flex justify-between items-center mb-5">
+                        <span class="receipt-total-title">Tổng số lượng</span>
+                        <span id="totalQtyBadge" class="text-3xl font-bold text-gray-100 theme-contrast">0</span>
+                    </div>
+                    <button type="button" id="submitCreateBtn" class="w-full py-4 text-white rounded-2xl font-bold uppercase text-[11px] tracking-widest transition-all shadow-2xl disabled:opacity-20" disabled>Xác nhận lưu phiếu kho</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toastContainer" class="fixed top-4 right-4 space-y-2"></div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            let selectedProducts = []; 
+            let createType = 'Import';
+
+            function showToast(msg, type = 'success') {
+                const container = document.getElementById('toastContainer');
+                if (!container) return;
+                const t = document.createElement('div');
+                t.className = `modal-solid px-6 py-4 rounded-2xl border-l-4 ${type === 'success' ? 'border-green-500' : 'border-red-500'} shadow-2xl text-gray-100 animate-fade-in mb-2 flex items-center gap-3`;
+                t.innerHTML = `<i class="bi ${type === 'success' ? 'bi-check-circle-fill text-green-400' : 'bi-exclamation-triangle-fill text-red-400'}"></i> <span class="text-sm font-medium">${msg}</span>`;
+                container.appendChild(t);
+                setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(20px)'; setTimeout(() => t.remove(), 500); }, 4000);
+            }
+
+            window.handleSearch = (e) => { if(e.key === 'Enter') applyFilter(); };
+            window.applyFilter = function(p = 1) { 
+                const params = new URLSearchParams(); 
+                params.set('searchTerm', document.getElementById('searchInput').value); 
+                params.set('type', document.getElementById('typeFilter').value); 
+                params.set('page', p); 
+                window.location.href = `/Inventory?${params.toString()}`; 
+            };
+            window.goToPage = (p) => applyFilter(p);
+            window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+
+            const selectAll = document.getElementById('selectAll');
+            const exportSelectedBtn = document.getElementById('exportSelectedBtn');
+            const selectedCountSpan = document.getElementById('selectedCount');
+
+            function updateExportUI() {
+                const checkedItems = document.querySelectorAll('.receipt-checkbox:checked');
+                const count = checkedItems.length;
+                if (selectedCountSpan) selectedCountSpan.innerText = count;
+                if (count > 0) exportSelectedBtn?.classList.remove('hidden');
+                else exportSelectedBtn?.classList.add('hidden');
+                document.querySelectorAll('.table-row').forEach(row => {
+                    const cb = row.querySelector('.receipt-checkbox');
+                    if (cb && cb.checked) row.classList.add('bg-blue-600/10');
+                    else row.classList.remove('bg-blue-600/10');
+                });
+            }
+
+            if(selectAll) {
+                selectAll.onchange = function() {
+                    document.querySelectorAll('.receipt-checkbox').forEach(cb => cb.checked = this.checked);
+                    updateExportUI();
+                };
+            }
+
+            const tableBody = document.getElementById('tableBody');
+            if (tableBody) {
+                tableBody.addEventListener('change', (e) => {
+                    if(e.target.classList.contains('receipt-checkbox')) updateExportUI();
+                });
+                tableBody.addEventListener('click', function(e) {
+                    const btn = e.target.closest('.viewDetailBtn');
+                    if (!btn) return;
+                    const code = btn.dataset.code;
+                    const note = btn.dataset.note;
+                    fetch(`/Inventory/GetDetails?code=${code}&originalNote=${encodeURIComponent(note)}`)
+                        .then(r => r.json()).then(res => {
+                            if (res.success) {
+                                const d = res.data;
+                                document.getElementById('detTitleCode').innerText = '#' + d.receiptCode;
+                                document.getElementById('detTypeLabel').innerHTML = d.type === 'Import' 
+                                ? '<div class="text-green-400 text-2xl font-black tracking-tighter uppercase">NHẬP KHO</div><div class="text-green-500/50 text-[9px] font-black tracking-[0.4em] mt-1">INBOUND</div>' 
+                                : '<div class="text-red-400 text-2xl font-black tracking-tighter uppercase">XUẤT KHO</div><div class="text-red-500/50 text-[9px] font-black tracking-[0.4em] mt-1">OUTBOUND</div>';
+                                document.getElementById('detCreatedAt').innerText = new Date(d.createdAt).toLocaleString('vi-VN');
+                                document.getElementById('detNote').innerText = d.note || "Giao dịch hệ thống";
+                                const list = document.getElementById('detItemsList'); list.innerHTML = ''; let total = 0;
+                                d.items.forEach(item => {
+                                    const sub = item.quantity * item.unitPrice; total += sub;
+                                    list.innerHTML += `
+                                        <tr class="hover:bg-white/5 transition-all duration-300 group">
+                                            <td class="px-10 py-6 flex items-center gap-6">
+                                                <div class="relative flex-shrink-0">
+                                                    <img src="${item.imageUrl || '/Upload/slide_1_mb.png'}" class="w-20 h-14 rounded-2xl border border-gray-700/50 object-cover shadow-xl group-hover:border-blue-500 transition-all duration-500" />
+                                                </div>
+                                                <div>
+                                                    <div class="font-black theme-contrast text-xl tracking-tighter mb-1 group-hover:text-blue-400 transition-colors">${item.productName}</div>
+                                                    <div class="flex items-center gap-4">
+                                                        <span class="text-xs text-gray-500 font-mono uppercase bg-gray-800/80 px-3 py-1 rounded-xl border border-gray-700/50">SKU: ${item.sku}</span>
+                                                        <span class="text-xs text-blue-400 font-bold uppercase">Đơn giá: ${item.unitPrice.toLocaleString('vi-VN')} đ</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-10 py-6 text-center font-black text-blue-400 text-3xl tracking-tighter opacity-90">x${item.quantity}</td>
+                                            <td class="px-10 py-6 text-right font-black text-emerald-400 font-mono text-xl tracking-tight">${sub.toLocaleString('vi-VN')} đ</td>
+                                        </tr>`;
+                                });
+                                document.getElementById('detTotalPrice').innerText = total.toLocaleString('vi-VN') + ' đ';
+                                document.getElementById('detailModal').classList.remove('hidden');
+                            } else { showToast(res.message, 'error'); }
+                        });
+                });
+            }
+
+            const btnInventory = document.getElementById('exportInventoryBtn');
+            if (btnInventory) { btnInventory.onclick = () => { window.location.href = '/Inventory/ExportReport'; showToast("Đang chuẩn bị Báo cáo tồn kho..."); }; }
+            const btnAllReceipts = document.getElementById('exportAllReceiptsBtn');
+            if (btnAllReceipts) { btnAllReceipts.onclick = () => { showToast("Đang chuẩn bị trang in toàn bộ phiếu..."); window.open('/Inventory/PrintAllReceipts', '_blank'); }; }
+            if (exportSelectedBtn) { exportSelectedBtn.onclick = function() {
+                const codes = Array.from(document.querySelectorAll('.receipt-checkbox:checked')).map(cb => cb.value);
+                if (codes.length === 0) return;
+                showToast(`Đang chuẩn bị trang in ${codes.length} phiếu...`);
+                window.open(`/Inventory/PrintSelected?codes=${encodeURIComponent(JSON.stringify(codes))}`, '_blank');
+            }; }
+
+            const btnImport = document.getElementById('importStockBtn');
+            const btnExport = document.getElementById('exportStockBtn');
+            if (btnImport) btnImport.onclick = () => openCreateModal('Import');
+            if (btnExport) btnExport.onclick = () => openCreateModal('Export');
+
+            function openCreateModal(type) {
+                createType = type; selectedProducts = []; document.getElementById('receiptNote').value = ''; renderSelectedList();
+                const iconBox = document.getElementById('createModalIconBox'); const icon = document.getElementById('createModalIcon');
+                const title = document.getElementById('createModalTitle'); const submitBtn = document.getElementById('submitCreateBtn');
+                if (type === 'Import') { 
+                    title.innerText = "Lập Phiếu Nhập Kho"; icon.className = "bi bi-box-arrow-in-down"; 
+                    iconBox.className = "w-12 h-12 rounded-2xl flex items-center justify-center bg-green-500/10 text-green-400 border border-green-500/20"; 
+                    submitBtn.className = "w-full py-5 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold uppercase text-[11px] tracking-widest shadow-xl transition-all";
+                } else { 
+                    title.innerText = "Lập Phiếu Xuất Kho"; icon.className = "bi bi-box-arrow-up"; 
+                    iconBox.className = "w-12 h-12 rounded-2xl flex items-center justify-center bg-red-500/10 text-red-400 border border-red-500/20"; 
+                    submitBtn.className = "w-full py-5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold uppercase text-[11px] tracking-widest shadow-xl transition-all";
+                }
+                document.getElementById('createReceiptModal').classList.remove('hidden');
+            }
+
+            const prodSearch = document.getElementById('productSearchInput');
+            const resultsBox = document.getElementById('searchResults');
+            if (prodSearch) { prodSearch.oninput = function() {
+                const q = this.value.trim(); if (q.length < 1) { resultsBox.classList.add('hidden'); return; }
+                fetch(`/Inventory/GetProductSearch?q=${q}`).then(r => r.json()).then(data => {
+                    resultsBox.innerHTML = '';
+                    if (data.length === 0) resultsBox.innerHTML = '<div class="p-4 text-gray-500 text-xs italic text-center">Không tìm thấy sản phẩm</div>';
+                    else { data.forEach(p => {
+                        const div = document.createElement('div'); div.className = "receipt-search-item p-3.5 cursor-pointer rounded-xl transition-colors group mb-2 last:mb-0";
+                        div.innerHTML = `<div class="flex justify-between items-center gap-4"><div class="min-w-0"><div class="text-sm font-bold text-gray-100 group-hover:text-blue-300 transition-colors truncate">${p.name}</div><div class="text-[10px] text-slate-400 font-mono mt-1">Kho: ${p.stock} | SKU: ${p.sku}</div></div><i class="bi bi-plus-circle-fill text-blue-400 text-lg flex-shrink-0"></i></div>`;
+                        div.onclick = () => { const ex = selectedProducts.find(x => x.id === p.id); if(ex) ex.quantity++; else selectedProducts.push({ ...p, quantity: 1 }); renderSelectedList(); resultsBox.classList.add('hidden'); prodSearch.value = ''; };
+                        resultsBox.appendChild(div);
+                    }); }
+                    resultsBox.classList.remove('hidden');
+                });
+            }; }
+
+            function renderSelectedList() {
+                const list = document.getElementById('selectedProductsList'); const btn = document.getElementById('submitCreateBtn'); 
+                const badge = document.getElementById('totalQtyBadge'); const count = document.getElementById('itemCountBadge');
+                if (!list) return; list.innerHTML = ''; let total = 0;
+                if (selectedProducts.length === 0) { if(btn) btn.disabled = true; if(badge) badge.innerText = '0'; if(count) count.innerText = '0 MẶT HÀNG'; return; }
+                selectedProducts.forEach((item, index) => {
+                    total += item.quantity; 
+                    const div = document.createElement('div'); div.className = "bg-gray-800/35 border border-gray-700 p-3.5 rounded-2xl flex items-center gap-3.5 animate-fade-in";
+                    div.innerHTML = `<div class="w-12 h-12 rounded-xl bg-slate-800/70 border border-gray-700 flex items-center justify-center flex-shrink-0 overflow-hidden">${item.imageUrl ? `<img src="${item.imageUrl}" class="w-full h-full object-cover" />` : `<span class="text-xs font-black text-blue-400">${item.name.charAt(0)}</span>`}</div><div class="flex-1 min-w-0"><div class="text-sm font-bold text-gray-100 truncate">${item.name}</div><div class="text-[10px] text-gray-400 font-mono italic mt-0.5">Kho: ${item.stock}</div></div><div class="flex items-center gap-1.5 bg-black/35 p-1 rounded-xl border border-gray-700 flex-shrink-0"><button type="button" onclick="updateItemQty(${index}, -1)" class="w-7 h-7 rounded-lg hover:bg-gray-700 text-gray-400 font-bold text-sm">-</button><input type="number" value="${item.quantity}" onchange="updateItemQty(${index}, 0, this.value)" class="w-10 bg-transparent text-center text-sm font-black text-blue-400 outline-none" /><button type="button" onclick="updateItemQty(${index}, 1)" class="w-7 h-7 rounded-lg hover:bg-gray-700 text-gray-400 font-bold text-sm">+</button></div><button type="button" onclick="removeItem(${index})" class="text-gray-500 hover:text-red-500 transition-colors p-1.5"><i class="bi bi-trash-fill text-base"></i></button>`;
+                    list.appendChild(div);
+                });
+                if(badge) badge.innerText = total; if(count) count.innerText = `${selectedProducts.length} MẶT HÀNG`; if(btn) btn.disabled = false;
+            }
+
+            window.updateItemQty = (i, d, v) => { if (v !== undefined) selectedProducts[i].quantity = Math.max(1, parseInt(v) || 1); else selectedProducts[i].quantity = Math.max(1, selectedProducts[i].quantity + d); renderSelectedList(); };
+            window.removeItem = (i) => { selectedProducts.splice(i, 1); renderSelectedList(); };
+            const btnSubmit = document.getElementById('submitCreateBtn');
+            if (btnSubmit) { btnSubmit.onclick = function() {
+                const note = document.getElementById('receiptNote').value.trim(); this.disabled = true; this.innerText = "ĐANG LƯU...";
+                fetch('/Inventory/CreateReceipt', { method: 'POST', headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value }, body: JSON.stringify({ Type: createType, Note: note, Products: selectedProducts.map(p => ({ ProductId: p.id, Quantity: p.quantity })) }) 
+                }).then(r => r.json()).then(res => { if (res.success) { showToast(res.message); setTimeout(() => location.reload(), 800); } else { this.disabled = false; this.innerText = "XÁC NHẬN LƯU PHIẾU KHO"; showToast(res.message, 'error'); } });
+            }; }
+        });
+    </script>
+}
+ype': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value }, body: JSON.stringify({ Type: createType, Note: note, Products: selectedProducts.map(p => ({ ProductId: p.id, Quantity: p.quantity })) }) 
+                }).then(r => r.json()).then(res => { if (res.success) { showToast(res.message); setTimeout(() => location.reload(), 800); } else { this.disabled = false; this.innerText = "XÁC NHẬN LƯU PHIẾU KHO"; showToast(res.message, 'error'); } });
+            }; }
+        });
+    </script>
+}

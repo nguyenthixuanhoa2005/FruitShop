@@ -1,0 +1,120 @@
+@model FruitShop.Models.Order
+
+@{
+    ViewData["Title"] = "Mã QR thanh toán";
+}
+
+<div class="container py-5">
+     <div class="row justify-content-center">
+          <div class="col-lg-5">
+               <div class="card border-0 shadow-lg rounded-4 p-5 text-center">
+                    <div class="mb-4">
+                         <i class="fas fa-qrcode" style="font-size: 80px; color: #198754;"></i>
+                    </div>
+
+                    <h3 class="fw-bold mb-2">Thanh toán bằng QR Code</h3>
+                    <p class="text-muted mb-4">Sử dụng ứng dụng ngân hàng để quét mã QR bên dưới</p>
+
+                    <!-- Countdown Timer -->
+                    <div class="alert alert-danger border-danger rounded-3 mb-4" id="timerAlert">
+                         <strong>Thời gian thanh toán còn lại:</strong><br>
+                         <h5 class="fw-bold text-danger mb-0" id="timerDisplay">30:00</h5>
+                    </div>
+
+                    <div class="alert alert-warning border-warning rounded-3 mb-4">
+                         <strong>Lưu ý:</strong> Vui lòng quét mã QR để hoàn tất thanh toán trong vòng 30 phút
+                    </div>
+
+                    <div class="bg-light rounded-4 p-4 mb-4" style="border: 3px dashed #198754;">
+                         @* Sửa lỗi nhảy giá tiền và đồng bộ nội dung chuyển khoản *@
+                         <img src="https://qr.sepay.vn/img?bank=MB&acc=0988436145&template=compact2&amount=@(Math.Round(Model.TotalAmount ?? 0).ToString("0"))&des=@(System.Net.WebUtility.UrlEncode("ĐH-" + Model.CreatedAt?.ToString("yyyyMMdd") + "-" + Model.Id.ToString("D3"))) " 
+                              alt="QR Code" class="img-fluid rounded-3" style="max-width: 100%; height: auto;">
+                    </div>
+
+                    <div class="card bg-success bg-opacity-10 border-success rounded-3 p-4 mb-4">
+                         <small class="text-muted d-block mb-2">Số tiền cần thanh toán</small>
+                         <h4 class="fw-bold text-success mb-0">@Model.TotalAmount?.ToString("N0") đ</h4>
+                    </div>
+
+                    <div class="card bg-light rounded-3 p-4 mb-4">
+                         <small class="text-muted d-block mb-2">Nội dung chuyển khoản (Bắt buộc chính xác)</small>
+                         <p class="fw-bold mb-0 text-primary" style="font-size: 1.2rem;">ĐH-@Model.CreatedAt?.ToString("yyyyMMdd")-@Model.Id.ToString("D3")</p>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-center mb-4">
+                         <div class="spinner-border spinner-border-sm text-success me-2" role="status"></div>
+                         <span class="text-muted small">Đang chờ hệ thống xác nhận thanh toán...</span>
+                    </div>
+
+                    <p class="text-muted small mb-4">Hệ thống sẽ tự động hoàn tất sau khi nhận được tiền</p>
+
+                    <div class="d-grid gap-2">
+                         <button type="button" class="btn btn-outline-danger rounded-pill fw-bold py-3" data-bs-toggle="modal" data-bs-target="#cancelTransferModal">
+                              <i class="fas fa-times-circle me-2"></i>Hủy giao dịch
+                         </button>
+                    </div>
+               </div>
+          </div>
+     </div>
+</div>
+
+<!-- Modal Xác nhận hủy giao dịch -->
+<div class="modal fade" id="cancelTransferModal" tabindex="-1" style="z-index: 2000;">
+     <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content border-0 shadow-lg rounded-4">
+               <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-exclamation-triangle text-danger me-2"></i>Xác nhận hủy giao dịch</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+               </div>
+               <div class="modal-body text-muted pt-2">
+                    Bạn có chắc chắn muốn hủy giao dịch chuyển khoản này không? Đơn hàng sẽ bị hủy và không được hoàn lại vào giỏ hàng.
+               </div>
+               <div class="modal-footer border-0 pt-0">
+                    <a href="/Cart/CancelBankTransfer?orderId=@Model.Id" class="btn btn-danger rounded-pill px-4">Xác nhận</a>
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+               </div>
+          </div>
+     </div>
+</div>
+
+<script>
+     // Tự động kiểm tra trạng thái đơn hàng mỗi 2 giây
+     const checkPaymentStatus = setInterval(async () => {
+          try {
+               const response = await fetch(`/Cart/GetOrderStatus?orderId=@Model.Id`);
+               const data = await response.json();
+
+               if (data.isPaid || data.paymentStatus == 4 || data.status >= 2) {
+                    clearInterval(checkPaymentStatus);
+                    window.location.href = `/Cart/PaymentSuccess?orderId=@Model.Id`;
+               }
+          } catch (error) {
+               console.error("Lỗi kiểm tra trạng thái:", error);
+          }
+     }, 2000);
+
+     let paymentDeadline;
+     const createdAt = new Date('@Model.CreatedAt?.ToString("yyyy-MM-ddTHH:mm:ss")');
+     paymentDeadline = new Date(createdAt.getTime() + 30 * 60 * 1000); // 30 phút
+
+     // Countdown timer
+     function updateTimer() {
+          const now = new Date();
+          const timeRemaining = paymentDeadline - now;
+
+          if (timeRemaining <= 0) {
+               document.getElementById('timerDisplay').textContent = 'Hết hạn!';
+               document.getElementById('timerAlert').classList.add('alert-danger');
+               clearInterval(timerInterval);
+               return;
+          }
+
+          const minutes = Math.floor(timeRemaining / 60000);
+          const seconds = Math.floor((timeRemaining % 60000) / 1000);
+          document.getElementById('timerDisplay').textContent = 
+               `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+     }
+
+     updateTimer();
+     const timerInterval = setInterval(updateTimer, 1000);
+</script>

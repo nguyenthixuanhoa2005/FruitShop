@@ -1,0 +1,175 @@
+@model List<FruitShop.Models.InventoryLog>
+@{
+    Layout = null;
+    // Nhóm các log theo mã phiếu (Note)
+    var receiptGroups = Model.GroupBy(l => l.Note ?? "N/A").OrderByDescending(g => g.Min(x => x.CreatedAt)).ToList();
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHIEU KHO - FRUIT SHOP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+        
+        body { font-family: 'Times New Roman', Times, serif; color: black; background: #f0f0f0; padding: 0; margin: 0; }
+        
+        /* Cấu trúc trang in */
+        .voucher-page { 
+            background: white; 
+            width: 210mm; 
+            min-height: 297mm; 
+            padding: 20mm; 
+            margin: 20px auto; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            position: relative;
+            page-break-after: always; /* Luôn ngắt trang sau mỗi phiếu */
+        }
+
+        .voucher-page:last-child { page-break-after: auto; }
+
+        .header-logo { font-size: 30px; font-weight: 900; color: #000; text-transform: uppercase; line-height: 1; margin-bottom: 5px; }
+        .header-info { font-size: 14px; line-height: 1.4; }
+        .report-title { font-size: 26px; font-weight: bold; text-align: center; margin: 30px 0 10px 0; text-transform: uppercase; }
+        .report-sub-title { text-align: center; font-style: italic; margin-bottom: 25px; font-size: 15px; }
+        
+        .info-section { margin-bottom: 20px; font-size: 15px; }
+        .info-row { display: flex; margin-bottom: 5px; }
+        .info-label { width: 150px; font-weight: bold; }
+
+        table.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        table.data-table th { background-color: #eee !important; border: 1.5px solid #000 !important; padding: 10px 5px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 13px; }
+        table.data-table td { border: 1.5px solid #000 !important; padding: 10px 8px; font-size: 15px; }
+        
+        /* Chữ ký - Đảm bảo trên 1 hàng ngang */
+        .signature-table { width: 100%; margin-top: 50px; border: none !important; }
+        .signature-table td { border: none !important; text-align: center; width: 33.33%; padding-bottom: 80px; vertical-align: top; }
+        .sign-title { font-weight: bold; text-transform: uppercase; font-size: 14px; display: block; margin-bottom: 5px; }
+        .sign-help { font-style: italic; font-size: 12px; display: block; }
+
+        .no-print-btn { position: fixed; top: 20px; right: 20px; padding: 15px 30px; background: #c00; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+
+        @@media print {
+            body { background: white; }
+            .no-print-btn { display: none; }
+            .voucher-page { margin: 0; box-shadow: none; width: 100%; padding: 10mm; }
+            @@page { size: A4; margin: 0; }
+            th { -webkit-print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+    <button class="no-print-btn" onclick="window.print()">
+        🖨️ XÁC NHẬN IN TẤT CẢ PHIẾU
+    </button>
+
+    @foreach (var group in receiptGroups)
+    {
+        var logs = group.ToList();
+        var first = logs.First();
+        
+        string displayCode = group.Key;
+        string reason = "Giao dịch hệ thống";
+        if (displayCode.StartsWith("REF:"))
+        {
+            var parts = displayCode.Replace("REF:", "").Split('|');
+            displayCode = parts[0];
+            if (parts.Length > 1) reason = parts[1];
+        }
+
+        var isImport = first.ChangeType == "Import";
+        var title = isImport ? "PHIẾU NHẬP KHO" : "PHIẾU XUẤT KHO";
+
+        <div class="voucher-page">
+            <!-- Header -->
+            <div class="row">
+                <div class="col-8">
+                    <div class="header-logo">FRUIT SHOP WMS</div>
+                    <div class="header-info">
+                        <strong>Đơn vị: Cửa Hàng Trái Cây Cao Cấp FruitShop</strong><br>
+                        Địa chỉ: Khu Công Nghệ Cao, TP. Thủ Đức, TP. HCM<br>
+                        Điện thoại: 0909.123.456
+                    </div>
+                </div>
+                <div class="col-4 text-end header-info">
+                    <strong>Mẫu số: 01-VT</strong><br>
+                    Ngày in: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+                </div>
+            </div>
+
+            <!-- Title -->
+            <div class="report-title">@title</div>
+            <div class="report-sub-title">Mã số phiếu: <strong>#@displayCode</strong></div>
+
+            <!-- Receipt Info -->
+            <div class="info-section">
+                <div class="info-row">
+                    <span class="info-label">Ngày thực hiện:</span>
+                    <span>@first.CreatedAt?.ToString("dd/MM/yyyy HH:mm:ss")</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Lý do / Ghi chú:</span>
+                    <span>@reason</span>
+                </div>
+            </div>
+
+            <!-- Items Table -->
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">STT</th>
+                        <th style="width: 42%;">Tên Sản Phẩm / Hàng Hóa</th>
+                        <th style="width: 20%;">Mã SKU</th>
+                        <th style="width: 15%;">Số lượng</th>
+                        <th style="width: 15%;">Đơn vị</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ int stt = 1; }
+                    @foreach (var item in logs)
+                    {
+                        <tr>
+                            <td class="text-center">@(stt++)</td>
+                            <td><strong>@item.Product?.Name</strong></td>
+                            <td class="text-center font-monospace">@item.Product?.Sku</td>
+                            <td class="text-center fw-bold" style="font-size: 18px;">@item.Quantity</td>
+                            <td class="text-center">@item.Product?.Unit</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div class="mt-4 text-end italic">
+                Tổng số mặt hàng: @logs.Count - Tổng số lượng luân chuyển: @logs.Sum(x => x.Quantity)
+            </div>
+
+            <!-- Signature Table - Guaranteed Horizontal -->
+            <table class="signature-table">
+                <tr>
+                    <td>
+                        <span class="sign-title">Người lập phiếu</span>
+                        <span class="sign-help">(Ký, họ tên)</span>
+                    </td>
+                    <td>
+                        <span class="sign-title">Thủ kho</span>
+                        <span class="sign-help">(Ký, họ tên)</span>
+                    </td>
+                    <td>
+                        <span class="sign-title">Giám đốc / Kế toán</span>
+                        <span class="sign-help">(Ký, đóng dấu)</span>
+                    </td>
+                </tr>
+            </table>
+
+            <div style="position: absolute; bottom: 30px; left: 0; right: 0; text-align: center;" class="small text-muted border-top pt-2 mx-5">
+                Bản in gốc từ hệ thống FruitShop WMS - @DateTime.Now.Year
+            </div>
+        </div>
+    }
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

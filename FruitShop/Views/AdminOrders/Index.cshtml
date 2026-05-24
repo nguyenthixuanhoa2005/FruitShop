@@ -1,0 +1,942 @@
+@model FruitShop.ViewModels.OrderListViewModel
+@{
+    ViewData["Title"] = "Quản lý đơn hàng";
+}
+
+<link rel="stylesheet" href="~/css/animations.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/products.css" asp-append-version="true" />
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+
+<style>
+    .orders-summary {
+        margin-bottom: 2rem;
+    }
+
+    .orders-summary-title {
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-bottom: 0.9rem;
+    }
+
+    html.dark-mode .orders-summary-title {
+        color: #94a3b8;
+    }
+
+    .orders-summary-shell {
+        border-radius: 2rem;
+        padding: 1.25rem;
+        background:
+            radial-gradient(circle at top right, rgba(148, 163, 184, 0.10), transparent 32%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.18));
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        backdrop-filter: blur(14px);
+    }
+
+    html.dark-mode .orders-summary-shell {
+        background:
+            radial-gradient(circle at top right, rgba(148, 163, 184, 0.10), transparent 32%),
+            linear-gradient(180deg, rgba(15, 23, 42, 0.76), rgba(15, 23, 42, 0.52));
+        border-color: rgba(148, 163, 184, 0.14);
+    }
+
+    .orders-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    @@media (min-width: 768px) {
+        .orders-stat-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (min-width: 1280px) {
+        .orders-stat-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+    }
+
+    .orders-stat-card {
+        position: relative;
+        overflow: hidden;
+        min-height: 184px;
+        border-radius: 1.5rem;
+        padding: 1.4rem;
+        color: #fff;
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        isolation: isolate;
+    }
+
+    .orders-stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 24px 55px rgba(15, 23, 42, 0.22);
+    }
+
+    .orders-stat-card::before {
+        content: '';
+        position: absolute;
+        top: -42px;
+        right: -28px;
+        width: 110px;
+        height: 110px;
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.16);
+        pointer-events: none;
+    }
+
+    .orders-stat-card::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 42%);
+        pointer-events: none;
+    }
+
+    .orders-stat-card-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+        height: 100%;
+    }
+
+    .orders-stat-card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .orders-stat-icon {
+        width: 2.65rem;
+        height: 2.65rem;
+        border-radius: 0.95rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.16);
+        flex: 0 0 auto;
+    }
+
+    .orders-stat-label {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        opacity: 0.92;
+        font-weight: 800;
+    }
+
+    .orders-stat-value {
+        margin-top: 0.45rem;
+        font-size: clamp(1.5rem, 2.3vw, 2rem);
+        line-height: 1.05;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+    }
+
+    .orders-stat-note {
+        margin-top: auto;
+        font-size: 0.82rem;
+        opacity: 0.92;
+    }
+
+    .orders-status-strip {
+        margin-top: 1rem;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.9rem;
+    }
+
+    @@media (min-width: 640px) {
+        .orders-status-strip {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @@media (min-width: 1024px) {
+        .orders-status-strip {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+    }
+
+    .orders-status-card {
+        border-radius: 1.15rem;
+        padding: 1rem 1.05rem;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    html.dark-mode .orders-status-card {
+        background: rgba(15, 23, 42, 0.82);
+        border-color: rgba(148, 163, 184, 0.14);
+        box-shadow: 0 10px 24px rgba(2, 6, 23, 0.28);
+    }
+
+    .orders-status-dot {
+        width: 2.2rem;
+        height: 2.2rem;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        background: color-mix(in srgb, var(--accent) 14%, transparent);
+        color: var(--accent);
+    }
+
+    .orders-status-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #334155;
+        line-height: 1.2;
+    }
+
+    html.dark-mode .orders-status-label {
+        color: #e2e8f0;
+    }
+
+    .orders-status-count {
+        font-size: 1.15rem;
+        line-height: 1;
+        font-weight: 800;
+        margin-top: 0.2rem;
+        color: var(--accent);
+    }
+
+    .orders-success-bar {
+        width: 100%;
+        height: 10px;
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.24);
+        overflow: hidden;
+        margin-top: 0.25rem;
+    }
+
+    .orders-success-bar > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: rgba(255, 255, 255, 0.9);
+    }
+
+</style>
+
+@Html.AntiForgeryToken()
+
+<div class="min-h-screen pt-0 px-6 pb-20">
+    <div id="ordersSummary" class="orders-summary animate-fade-in">
+        <div class="orders-summary-shell">
+                <div class="flex items-center justify-between mb-2">
+                    <h1 class="text-2xl font-bold tracking-tight theme-contrast">Tổng quan đơn hàng</h1>
+                    <div class="flex items-center gap-2">
+                        <button id="columnConfigBtn" class="text-gray-400 hover:text-white p-2 rounded-full hover:bg-gray-800 transition-all" title="Cấu hình hiển thị cột">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+            <div class="orders-stat-grid">
+                <div class="orders-stat-card" style="background: linear-gradient(135deg, #2d6bff 0%, #2c63ea 100%);">
+                    <div class="orders-stat-card-content">
+                        <div class="orders-stat-card-header">
+                            <div>
+                                <div class="text-xl font-bold text-gray-100 theme-contrast">Tổng doanh thu</div>
+                                <div class="orders-stat-value font-bold text-gray-100">@Model.TotalAmount.ToString("N0")đ</div>
+                            </div>
+                            <div class="orders-stat-icon">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                        </div>
+                        <div class="orders-stat-note"><span class="font-semibold">@Model.TotalOrders</span> đơn hàng</div>
+                    </div>
+                </div>
+
+                <div class="orders-stat-card" style="background: linear-gradient(135deg, #a841f6 0%, #8f2ef0 100%);">
+                    <div class="orders-stat-card-content">
+                        <div class="orders-stat-card-header">
+                            <div>
+                                <div class="text-xl font-bold text-white tracking-tight">Trạng thái đơn hàng</div>
+                                <div class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[11px] font-medium">
+                                    <div class="flex items-center justify-between gap-2"><span>Chờ:</span><span class="font-bold">@Model.PendingCount</span></div>
+                                    <div class="flex items-center justify-between gap-2"><span>Giao:</span><span class="font-bold">@Model.ShippingCount</span></div>
+                                    <div class="flex items-center justify-between gap-2"><span>Xong:</span><span class="font-bold">@Model.CompletedCount</span></div>
+                                    <div class="flex items-center justify-between gap-2"><span>Hủy:</span><span class="font-bold">@Model.CancelledCount</span></div>
+                                </div>
+                            </div>
+                            <div class="orders-stat-icon">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                            </div>
+                        </div>
+                        <div class="orders-stat-note">Phân phối theo trạng thái của dữ liệu</div>
+                    </div>
+                </div>
+
+                <div class="orders-stat-card" style="background: linear-gradient(135deg, #0dbd4f 0%, #08aa45 100%);">
+                    <div class="orders-stat-card-content">
+                        <div class="orders-stat-card-header">
+                            <div>
+                                <div class="text-xl font-bold text-white tracking-tight ">Tỉ lệ thành công</div>
+                                <div class="orders-stat-value font-bold text-gray-100">@Model.SuccessRate.ToString("N1")%</div>
+                                <div class="orders-success-bar"><span style="width: @Model.SuccessRate%"></span></div>
+                            </div>
+                            <div class="orders-stat-icon">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            </div>
+                        </div>
+                        <div class="orders-stat-note">Đơn hoàn thành so với tổng số đơn</div>
+                    </div>
+                </div>
+
+                <div class="orders-stat-card" style="background: linear-gradient(135deg, #ff6a00 0%, #ff5a18 100%);">
+                    <div class="orders-stat-card-content">
+                        <div class="orders-stat-card-header">
+                            <div>
+                                <div class="text-xl font-bold text-white tracking-tight text-gray-100">Giá trị trung bình</div>
+                                <div class="orders-stat-value">@Model.AverageOrderValue.ToString("N0")đ</div>
+                            </div>
+                            <div class="orders-stat-icon">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            </div>
+                        </div>
+                        <div class="orders-stat-note">Trung bình mỗi đơn hàng</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="orders-status-strip">
+                <div class="orders-status-card" style="--accent: #3b82f6;">
+                    <div class="orders-status-dot"><i class="bi bi-clock-history"></i></div>
+                    <div>
+                        <div class="orders-status-label">Chờ xác nhận</div>
+                        <div class="orders-status-count">@Model.PendingCount</div>
+                    </div>
+                </div>
+                <div class="orders-status-card" style="--accent: #7c3aed;">
+                    <div class="orders-status-dot"><i class="bi bi-grid-3x3-gap-fill"></i></div>
+                    <div>
+                        <div class="orders-status-label">Tổng đơn lọc</div>
+                        <div class="orders-status-count">@Model.TotalOrders</div>
+                    </div>
+                </div>
+                <div class="orders-status-card" style="--accent: #a855f7;">
+                    <div class="orders-status-dot"><i class="bi bi-truck"></i></div>
+                    <div>
+                        <div class="orders-status-label">Đang giao</div>
+                        <div class="orders-status-count">@Model.ShippingCount</div>
+                    </div>
+                </div>
+                <div class="orders-status-card" style="--accent: #10b981;">
+                    <div class="orders-status-dot"><i class="bi bi-check-circle"></i></div>
+                    <div>
+                        <div class="orders-status-label">Đã giao</div>
+                        <div class="orders-status-count">@Model.CompletedCount</div>
+                    </div>
+                </div>
+                <div class="orders-status-card" style="--accent: #ef4444;">
+                    <div class="orders-status-dot"><i class="bi bi-x-circle"></i></div>
+                    <div>
+                        <div class="orders-status-label">Đã hủy</div>
+                        <div class="orders-status-count">@Model.CancelledCount</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="flex flex-col md:flex-row items-center gap-4 mb-4">
+        <div class="flex items-center gap-2">
+            <button id="exportBtn" class="btn-primary flex items-center gap-2 px-6 py-2.5" title="Phím tắt: Alt + E">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Xuất dữ liệu <span class="text-[10px] opacity-50 font-mono">(Alt+E)</span>
+            </button>
+            @* <button id="columnConfigBtn" class="p-2.5 rounded-xl bg-gray-800 border border-gray-700 text-gray-400 hover:text-white transition-all" title="Cấu hình hiển thị cột">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"></path></svg>
+            </button> *@
+        </div>
+
+        <div class="flex-1 relative flex gap-2 w-full">
+            <div class="flex-1 relative">
+                <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input type="text" id="searchInput" placeholder="Tìm ID đơn hàng, tên, sđt... (Alt+S hoặc /)" class="w-full pl-10 pr-4 py-2 dark-input rounded-xl" value="@ViewData["SearchTerm"]" />
+            </div>
+            <button id="toggleFilterBtn" class="btn-primary flex items-center gap-2 px-4 py-2" title="Phím tắt: Alt + F">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                Bộ lọc <span class="text-[10px] opacity-50 font-mono">(Alt+F)</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Panel -->
+    <div id="filterPanel" class="hidden dark-card p-6 mb-6 border border-gray-700/50 animate-slide-down shadow-xl">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="theme-contrast font-bold flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                Bộ lọc đơn hàng nâng cao
+            </h3>
+            <button id="resetFilterBtn" class="text-[10px] text-gray-400 hover:text-white uppercase font-bold px-3 py-1.5 border border-gray-700 rounded-lg transition-all">Đặt lại</button>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-5">
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-semibold text-gray-400 tracking-tight">Trạng thái</label>
+                <select id="fStatus" class="dark-input w-full p-2 rounded-lg cursor-pointer">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="1" selected="@(ViewData["Status"]?.ToString() == "1")">Chờ xác nhận</option>
+                    <option value="2" selected="@(ViewData["Status"]?.ToString() == "2")">Đang giao</option>
+                    <option value="3" selected="@(ViewData["Status"]?.ToString() == "3")">Đã hoàn thành</option>
+                    <option value="4" selected="@(ViewData["Status"]?.ToString() == "4")">Đã hủy</option>
+                </select>
+            </div>
+            <div class="space-y-1.5 md:col-span-2">
+                <label class="text-[11px] font-semibold text-gray-400 tracking-tight">Khoảng ngày đặt hàng</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="date" id="fStartDate" class="dark-input w-full p-2 rounded-lg" value="@ViewData["fStartDate"]">
+                    <input type="date" id="fEndDate" class="dark-input w-full p-2 rounded-lg" value="@ViewData["fEndDate"]">
+                </div>
+            </div>
+            <div class="space-y-1.5">
+                <label class="text-[11px] font-semibold text-gray-400 tracking-tight">Giá trị đơn hàng (VNĐ)</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="number" id="fMinPrice" class="dark-input w-full p-2 rounded-lg" placeholder="Từ" value="@ViewData["fMinPrice"]">
+                    <input type="number" id="fMaxPrice" class="dark-input w-full p-2 rounded-lg" placeholder="Đến" value="@ViewData["fMaxPrice"]">
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex justify-end mt-8 border-t border-gray-700/50 pt-6">
+            <button id="applyFilterBtn" class="bg-blue-600 hover:bg-blue-500 text-white px-10 py-2 rounded-xl font-bold shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                Áp dụng bộ lọc
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="dark-card overflow-x-auto shadow-2xl">
+        <table class="w-full" id="orderTable">
+            <thead>
+                <tr class="table-header border-b border-gray-700/50">
+                    <th class="px-4 py-3 text-left sticky-col" data-col-id="checkbox"><input type="checkbox" id="selectAll" class="w-4 h-4 cursor-pointer accent-blue-600" /></th>
+                    <th class="px-4 py-3 text-left sticky-col" data-col-id="stt">STT</th>
+                    <th class="px-4 py-3 text-left" data-col-id="column-id">Mã đơn</th>
+                    <th class="px-4 py-3 text-left theme-contrast" data-col-id="column-customer">Khách hàng</th>
+                    <th class="px-4 py-3 text-left" data-col-id="column-phone">SĐT</th>
+                    <th class="px-4 py-3 text-left" data-col-id="column-date">Ngày đặt</th>
+                    <th class="px-4 py-3 text-left" data-col-id="column-amount">Tổng tiền</th>
+                    <th class="px-4 py-3 text-center" data-col-id="column-items">Số SP</th>
+                    <th class="px-4 py-3 text-left" data-col-id="column-status">Trạng thái</th>
+                    <th class="px-4 py-3 text-center sticky-col-right" data-col-id="actions">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                @if (Model.Orders != null && Model.Orders.Any())
+                {
+                    int index = ((Model.CurrentPage - 1) * Model.PageSize) + 1;
+                    foreach (var item in Model.Orders)
+                    {
+                        <tr class="table-row text-sm border-b border-gray-800/30 hover:bg-gray-800/20 transition-colors" data-id="@item.Id">
+                            <td class="px-4 py-3 sticky-col" data-col-id="checkbox"><input type="checkbox" class="orderCheckbox w-4 h-4 cursor-pointer accent-blue-600" data-id="@item.Id" /></td>
+                            <td class="px-4 py-3 sticky-col text-gray-500 font-mono" data-col-id="stt">@index</td>
+                            <td class="px-4 py-3 font-mono text-blue-400 font-bold" data-col-id="column-id">#@item.Id.ToString("D5")</td>
+                            <td class="px-4 py-3 font-semibold theme-contrast" data-col-id="column-customer">@item.CustomerName</td>
+                            <td class="px-4 py-3 text-gray-400" data-col-id="column-phone">@item.Phone</td>
+                            <td class="px-4 py-3 text-gray-400" data-col-id="column-date">@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="px-4 py-3 text-green-400 font-bold" data-col-id="column-amount">@String.Format("{0:N0}", item.TotalAmount) đ</td>
+                            <td class="px-4 py-3 text-center text-gray-400" data-col-id="column-items">@item.ItemCount</td>
+                            <td class="px-4 py-3" data-col-id="column-status">
+                                @{
+                                    string statusClass = item.Status switch {
+                                        1 => "bg-blue-900/30 text-blue-400",
+                                        2 => "bg-yellow-900/30 text-yellow-400",
+                                        3 => "bg-green-900/30 text-green-400",
+                                        4 => "bg-red-900/30 text-red-400",
+                                        _ => "bg-gray-900/30 text-gray-400"
+                                    };
+                                    string statusText = item.Status switch {
+                                        1 => "Chờ xác nhận",
+                                        2 => "Đang giao",
+                                        3 => "Đã hoàn thành",
+                                        4 => "Đã hủy",
+                                        _ => "Không xác định"
+                                    };
+                                }
+                                <span class="px-2 py-1 rounded-full text-[10px] font-bold @statusClass">@statusText</span>
+                            </td>
+                            <td class="px-4 py-3 text-center sticky-col-right" data-col-id="actions">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <button type="button" class="viewBtn p-1.5 rounded-lg text-blue-400 hover:bg-blue-400/10 transition-all" title="Xem chi tiết" data-id="@item.Id">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        index++;
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="10" class="px-4 py-16 text-center text-gray-500 font-medium italic">Không có đơn hàng nào khớp với tìm kiếm.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-container flex flex-col items-center gap-4 mt-8">
+        @if (Model.TotalPages > 1)
+        {
+            <div class="flex items-center justify-center gap-2">
+                <button data-page="1" class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-blue-400 transition-all @(Model.CurrentPage == 1 ? "pointer-events-none opacity-30" : "hover:bg-gray-700 hover:text-white")"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M15.707 15.707a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 010 1.414zm-6 0a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 1.414L5.414 10l4.293 4.293a1 1 0 010 1.414z" /></svg></button>
+                @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages, Model.CurrentPage + 2); i++)
+                {
+                    <button data-page="@i" class="w-10 h-10 rounded-lg flex items-center justify-center font-bold transition-all @(i == Model.CurrentPage ? "bg-blue-600 text-white shadow-lg shadow-blue-900/40" : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white")">@i</button>
+                }
+                <button data-page="@Model.TotalPages" class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-blue-400 transition-all @(Model.CurrentPage == Model.TotalPages ? "pointer-events-none opacity-30" : "hover:bg-gray-700 hover:text-white")"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414zm6 0a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414-1.414L14.586 10l-4.293-4.293a1 1 0 010-1.414z" /></svg></button>
+                
+                <div class="flex items-center gap-2 ml-4 px-3 py-1.5 bg-gray-800/50 rounded-xl border border-gray-700/50">
+                    <span class="text-[10px] text-gray-500 uppercase font-bold">Đi tới</span>
+                    <input type="number" id="goToPageInput" value="@Model.CurrentPage" min="1" max="@Model.TotalPages" class="w-12 bg-transparent text-white text-center text-sm font-bold focus:outline-none" />
+                    <span class="text-[10px] text-gray-500">/ @Model.TotalPages</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal Chi Tiết Đơn Hàng -->
+<div id="detailsModal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div class="dark-card w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl shadow-2xl border border-gray-700/50 bg-slate-900 animate-fade-in flex flex-col">
+        <div class="px-6 py-5 border-b border-gray-700/50 flex items-center justify-between bg-gray-800/30">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center text-blue-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white">Chi tiết đơn hàng <span id="detOrderId" class="text-blue-400"></span></h3>
+                    <p class="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-0.5" id="detOrderTime"></p>
+                </div>
+            </div>
+            <button class="close-modal p-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-full transition-all">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-6 md:p-8 scrollbar-thin">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Thông tin khách hàng & Vận chuyển -->
+                <div class="space-y-6">
+                    <div class="p-5 rounded-2xl bg-gray-800/30 border border-gray-700/30">
+                        <h4 class="text-xs text-blue-400 uppercase font-bold tracking-widest mb-4">Thông tin vận chuyển</h4>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-[10px] text-gray-500 uppercase font-bold">Người nhận</label>
+                                <p id="detReceiver" class="text-sm font-bold text-gray-200"></p>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-500 uppercase font-bold">Số điện thoại</label>
+                                <p id="detPhone" class="text-sm font-bold text-gray-200"></p>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-500 uppercase font-bold">Địa chỉ</label>
+                                <p id="detAddress" class="text-xs text-gray-400 leading-relaxed"></p>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-500 uppercase font-bold">Ghi chú</label>
+                                <p id="detNote" class="text-xs text-gray-500 italic"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-5 rounded-2xl bg-blue-600/5 border border-blue-500/10">
+                        <h4 class="text-xs text-blue-400 uppercase font-bold tracking-widest mb-4">Trạng thái & Thanh toán</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-[10px] text-gray-500 uppercase font-bold mb-2 block">Trạng thái hiện tại</label>
+                                <div id="detStatusBadge"></div>
+                            </div>
+                            <div class="pt-2 border-t border-gray-700/50">
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-gray-500">Giảm giá:</span>
+                                    <span id="detDiscount" class="text-red-400 font-bold">0đ</span>
+                                </div>
+                                <div class="flex justify-between text-base">
+                                    <span class="text-gray-200 font-bold">Tổng tiền:</span>
+                                    <span id="detTotal" class="text-green-400 font-black">0đ</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Danh sách sản phẩm -->
+                <div class="lg:col-span-2">
+                    <h4 class="text-xs text-gray-400 uppercase font-bold tracking-widest mb-4 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7"></path></svg>
+                        Sản phẩm trong đơn hàng
+                    </h4>
+                    <div class="dark-card overflow-hidden border border-gray-700/30">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-800/50 text-gray-500 text-[10px] uppercase font-bold">
+                                    <th class="px-4 py-3 text-left">Sản phẩm</th>
+                                    <th class="px-4 py-3 text-center">SL</th>
+                                    <th class="px-4 py-3 text-right">Đơn giá</th>
+                                    <th class="px-4 py-3 text-right">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detItemsList"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="px-8 py-5 border-t border-gray-700/50 flex justify-end gap-3 bg-gray-800/30">
+            <button class="close-modal px-6 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all">Đóng</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Xuất Dữ Liệu -->
+<div id="exportModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+    <div class="dark-card w-full max-w-md p-8 rounded-2xl shadow-2xl border border-gray-700 animate-fade-in">
+        <div class="flex items-center justify-between mb-6 border-b border-gray-700/50 pb-4">
+            <h3 class="text-xl font-bold text-white">Xuất dữ liệu đơn hàng</h3>
+            <button type="button" class="close-modal text-gray-400 hover:text-white transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+        <div class="space-y-4 mb-6">
+            <label class="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl border border-gray-700/50 cursor-pointer hover:border-blue-500 transition-all">
+                <input type="radio" name="exportScope" value="all" checked class="accent-blue-500 w-4 h-4">
+                <div class="text-white text-sm font-medium">Tất cả đơn hàng lọc được</div>
+            </label>
+            <label class="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl border border-gray-700/50 cursor-pointer hover:border-blue-500 transition-all">
+                <input type="radio" name="exportScope" value="selected" class="accent-blue-500 w-4 h-4">
+                <div class="text-white text-sm font-medium">Đơn hàng đã chọn (<span id="exportSelectedCount" class="text-blue-400">0</span>)</div>
+            </label>
+        </div>
+        <button type="button" id="doExportBtn" class="w-full py-3.5 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Tải xuống Excel (.xlsx)
+        </button>
+    </div>
+</div>
+
+<!-- Modal Column Config -->
+<div id="columnConfigModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+    <div class="dark-card w-full max-w-md p-6 rounded-2xl border border-gray-700 shadow-2xl">
+        <div class="flex items-center justify-between mb-4 border-b border-gray-700/50 pb-3">
+            <h3 class="text-white font-bold flex items-center gap-2">
+                <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"></path></svg>
+                Cấu hình hiển thị cột
+            </h3>
+            <button class="close-modal text-gray-400 hover:text-white transition-all"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+        <div id="columnList" class="space-y-2 mb-6 max-h-80 overflow-y-auto pr-2 scrollbar-thin"></div>
+        <div class="flex gap-3">
+            <button id="resetColumnsBtn" class="flex-1 py-2.5 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 rounded-xl font-bold transition-all theme-contrast">Đặt lại</button>
+            <button id="saveColumnsBtn" class="flex-1 py-2.5 bg-blue-600 rounded-xl font-bold hover:bg-blue-500 transition-all theme-contrast">Lưu cấu hình</button>
+        </div>
+    </div>
+</div>
+
+<div id="toastContainer" class="fixed top-4 right-4 z-[100] space-y-2"></div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            let currentOrderId = null;
+            const urlParams = new URLSearchParams(window.location.search);
+
+            // --- HELPER FUNCTIONS ---
+            function showToast(msg, type = 'success') {
+                const container = document.getElementById('toastContainer');
+                if (!container) return;
+                const t = document.createElement('div');
+                t.className = `dark-card px-6 py-3.5 rounded-xl border-l-4 ${type === 'success' ? 'border-blue-500' : 'border-red-500'} shadow-2xl text-white animate-fade-in mb-2 flex items-center gap-3`;
+                const icon = type === 'success' ? '<svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>' : '<svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>';
+                t.innerHTML = `${icon} <span class="font-medium text-sm">${msg}</span>`;
+                container.appendChild(t);
+                setTimeout(() => {
+                    t.classList.add('opacity-0');
+                    setTimeout(() => t.remove(), 500);
+                }, 3000);
+            }
+
+            const formatMoney = (v) => v ? parseInt(v).toLocaleString('vi-VN') + ' đ' : '0 đ';
+
+            // --- SELECTION LOGIC ---
+            const updateSelectionUI = () => {
+                const checkedCount = document.querySelectorAll('.orderCheckbox:checked').length;
+                const selectAllEl = document.getElementById('selectAll');
+                const checkboxes = document.querySelectorAll('.orderCheckbox');
+                
+                if (selectAllEl) {
+                    selectAllEl.checked = (checkboxes.length > 0 && checkedCount === checkboxes.length);
+                }
+            };
+
+            document.getElementById('selectAll').onchange = function () {
+                document.querySelectorAll('.orderCheckbox').forEach(cb => cb.checked = this.checked);
+                updateSelectionUI();
+            };
+
+            // --- SEARCH & FILTER AJAX ---
+            function performSearch(page = 1) {
+                const term = document.getElementById('searchInput').value;
+                urlParams.set('searchTerm', term);
+                urlParams.set('page', page);
+
+                const status = document.getElementById('fStatus').value;
+                if(status) urlParams.set('status', status); else urlParams.delete('status');
+
+                const startDate = document.getElementById('fStartDate').value;
+                if(startDate) urlParams.set('fStartDate', startDate); else urlParams.delete('fStartDate');
+
+                const endDate = document.getElementById('fEndDate').value;
+                if(endDate) urlParams.set('fEndDate', endDate); else urlParams.delete('fEndDate');
+
+                const minP = document.getElementById('fMinPrice').value;
+                if(minP) urlParams.set('fMinPrice', minP); else urlParams.delete('fMinPrice');
+
+                const maxP = document.getElementById('fMaxPrice').value;
+                if(maxP) urlParams.set('fMaxPrice', maxP); else urlParams.delete('fMaxPrice');
+
+                const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+                window.history.pushState({ path: newUrl }, '', newUrl);
+
+                fetch(newUrl)
+                    .then(r => r.text())
+                    .then(html => {
+                        const doc = new DOMParser().parseFromString(html, 'text/html');
+                        const newStats = doc.getElementById('ordersSummary');
+                        const currentStats = document.getElementById('ordersSummary');
+                        if (newStats && currentStats) currentStats.innerHTML = newStats.innerHTML;
+                        const tableBody = document.getElementById('tableBody');
+                        tableBody.innerHTML = doc.getElementById('tableBody').innerHTML;
+                        const newPag = doc.querySelector('.pagination-container');
+                        const pagCont = document.querySelector('.pagination-container');
+                        if (newPag && pagCont) pagCont.innerHTML = newPag.innerHTML;
+                        attachRowEvents();
+                        applyColumnConfig();
+                        updateSelectionUI(); 
+                    });
+            }
+
+            const debounce = (fn, d) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), d); }; };
+            document.getElementById('searchInput').oninput = debounce(() => performSearch(1), 300);
+
+            document.getElementById('applyFilterBtn').onclick = () => {
+                document.getElementById('filterPanel').classList.add('hidden');
+                performSearch(1);
+            };
+            
+            document.getElementById('resetFilterBtn').onclick = () => {
+                document.querySelectorAll('#filterPanel input, #filterPanel select').forEach(i => i.value = '');
+                performSearch(1);
+            };
+
+            // --- EXPORT LOGIC ---
+            document.getElementById('exportBtn').onclick = () => {
+                document.getElementById('exportSelectedCount').innerText = document.querySelectorAll('.orderCheckbox:checked').length;
+                document.getElementById('exportModal').classList.remove('hidden');
+            };
+
+            document.getElementById('doExportBtn').onclick = function () {
+                const scope = document.querySelector('input[name="exportScope"]:checked').value;
+                const params = new URLSearchParams(urlParams);
+                if (scope === 'selected') {
+                    const ids = Array.from(document.querySelectorAll('.orderCheckbox:checked')).map(cb => cb.dataset.id).join(',');
+                    if (!ids) return showToast("Vui lòng chọn đơn hàng!", "error");
+                    params.set('ids', ids);
+                }
+                window.location.href = `/AdminOrders/ExportExcel?${params.toString()}`;
+                document.getElementById('exportModal').classList.add('hidden');
+            };
+
+            // --- DETAILS ---
+            function attachRowEvents() {
+                document.querySelectorAll('.orderCheckbox').forEach(cb => {
+                    cb.onchange = updateSelectionUI;
+                });
+                document.querySelectorAll('.viewBtn').forEach(btn => {
+                    btn.onclick = function () {
+                        const id = this.dataset.id;
+                        currentOrderId = id;
+                        fetch(`/AdminOrders/GetDetails?id=${id}`)
+                            .then(r => r.json())
+                            .then(res => {
+                                if (res.success) {
+                                    const d = res.data;
+                                    document.getElementById('detOrderId').innerText = `#${d.id.toString().padStart(5, '0')}`;
+                                    document.getElementById('detOrderTime').innerText = `Ngày đặt: ${d.createdAt}`;
+                                    document.getElementById('detReceiver').innerText = d.receiverName;
+                                    document.getElementById('detPhone').innerText = d.receiverPhone;
+                                    document.getElementById('detAddress').innerText = d.receiverAddress;
+                                    document.getElementById('detNote').innerText = d.note || 'Không có ghi chú';
+                                    document.getElementById('detDiscount').innerText = `-${formatMoney(d.discountAmount)}`;
+                                    document.getElementById('detTotal').innerText = formatMoney(d.totalAmount);
+                                    
+                                    // Render Status Badge
+                                    let statusClass = "", statusText = "";
+                                    switch(d.status) {
+                                        case 1: statusClass = "bg-blue-900/30 text-blue-400"; statusText = "Chờ xác nhận"; break;
+                                        case 2: statusClass = "bg-yellow-900/30 text-yellow-400"; statusText = "Đang giao hàng"; break;
+                                        case 3: statusClass = "bg-green-900/30 text-green-400"; statusText = "Đã hoàn thành"; break;
+                                        case 4: statusClass = "bg-red-900/30 text-red-400"; statusText = "Đã hủy đơn"; break;
+                                        default: statusClass = "bg-gray-900/30 text-gray-400"; statusText = "Không xác định";
+                                    }
+                                    document.getElementById('detStatusBadge').innerHTML = `<span class="px-3 py-1.5 rounded-xl text-xs font-bold ${statusClass}">${statusText}</span>`;
+
+                                    const list = document.getElementById('detItemsList');
+                                    list.innerHTML = '';
+                                    d.items.forEach(item => {
+                                        list.innerHTML += `<tr class="border-b border-gray-700/30 hover:bg-gray-800/10 transition-colors">
+                                            <td class="px-4 py-3 text-gray-200">${item.productName}</td>
+                                            <td class="px-4 py-3 text-center text-gray-400 font-bold">${item.quantity}</td>
+                                            <td class="px-4 py-3 text-right text-gray-500 font-mono">${formatMoney(item.unitPrice)}</td>
+                                            <td class="px-4 py-3 text-right font-black text-blue-400 font-mono">${formatMoney(item.total)}</td>
+                                        </tr>`;
+                                    });
+                                    document.getElementById('detailsModal').classList.remove('hidden');
+                                }
+                            });
+                    };
+                });
+            }
+
+            // --- COLUMN CONFIG ---
+            const defaultCols = [
+                { id: 'checkbox', name: 'Chọn', visible: true }, { id: 'stt', name: 'STT', visible: true }, 
+                { id: 'column-id', name: 'Mã đơn', visible: true }, { id: 'column-customer', name: 'Khách hàng', visible: true }, 
+                { id: 'column-phone', name: 'Số điện thoại', visible: true }, { id: 'column-date', name: 'Ngày đặt', visible: true },
+                { id: 'column-amount', name: 'Tổng tiền', visible: true }, { id: 'column-items', name: 'Số SP', visible: true },
+                { id: 'column-status', name: 'Trạng thái', visible: true }, { id: 'actions', name: 'Thao tác', visible: true }
+            ];
+            let colCfg = JSON.parse(localStorage.getItem('orderColumnConfig')) || defaultCols;
+
+            const applyColumnConfig = () => {
+                const table = document.getElementById('orderTable');
+                if (!table) return;
+                const rows = table.querySelectorAll('tr');
+                rows.forEach(row => {
+                    colCfg.forEach(c => {
+                        const cell = row.querySelector(`[data-col-id="${c.id}"]`);
+                        if (cell) { cell.style.display = c.visible ? '' : 'none'; row.appendChild(cell); }
+                    });
+                });
+            };
+
+            let sortableInstance = null;
+            document.getElementById('columnConfigBtn').onclick = () => {
+                const list = document.getElementById('columnList');
+                if (!list) return; list.innerHTML = '';
+                colCfg.forEach((c) => {
+                    const d = document.createElement('div');
+                    d.className = "flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl hover:bg-gray-800 transition-colors border border-gray-700/30 cursor-move group";
+                    d.dataset.id = c.id;
+                    d.innerHTML = `<div class="text-gray-500 group-hover:text-gray-300"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M7 2a2 2 0 11.001 3.999A2 2 0 017 2zm0 6a2 2 0 11.001 3.999A2 2 0 017 8zm0 6a2 2 0 11.001 3.999A2 2 0 017 14zm6-12a2 2 0 11.001 3.999A2 2 0 0113 2zm0 6a2 2 0 11.001 3.999A2 2 0 0113 8zm0 6a2 2 0 11.001 3.999A2 2 0 0113 14z" /></svg></div><span class="flex-1 text-sm font-medium theme-contrast">${c.name}</span><input type="checkbox" ${c.visible ? 'checked' : ''} class="col-visibility w-5 h-5 rounded accent-blue-600 cursor-pointer">`;
+                    list.appendChild(d);
+                });
+                if (sortableInstance) sortableInstance.destroy();
+                sortableInstance = new Sortable(list, { animation: 150, ghostClass: 'bg-blue-600/10' });
+                document.getElementById('columnConfigModal').classList.remove('hidden');
+            };
+
+            document.getElementById('saveColumnsBtn').onclick = () => {
+                const listItems = document.querySelectorAll('#columnList > div');
+                const newCfg = [];
+                listItems.forEach(item => {
+                    const id = item.dataset.id;
+                    const visible = item.querySelector('.col-visibility').checked;
+                    const originalCol = defaultCols.find(dc => dc.id === id) || { name: 'N/A' };
+                    newCfg.push({ id, name: originalCol.name, visible });
+                });
+                colCfg = newCfg; localStorage.setItem('orderColumnConfig', JSON.stringify(colCfg));
+                applyColumnConfig(); document.getElementById('columnConfigModal').classList.add('hidden');
+                showToast("Đã lưu cấu hình cột");
+            };
+
+            document.getElementById('resetColumnsBtn').onclick = () => {
+                colCfg = JSON.parse(JSON.stringify(defaultCols)); localStorage.removeItem('orderColumnConfig');
+                applyColumnConfig(); document.getElementById('columnConfigModal').classList.add('hidden');
+                showToast("Đã khôi phục cài đặt gốc");
+            };
+
+            // --- UI EVENTS ---
+            document.querySelectorAll('.close-modal').forEach(b => {
+                b.onclick = () => b.closest('.fixed').classList.add('hidden');
+            });
+            document.getElementById('toggleFilterBtn').onclick = () => {
+                document.getElementById('filterPanel').classList.toggle('hidden');
+            };
+            const pagContainer = document.querySelector('.pagination-container');
+            if (pagContainer) {
+                pagContainer.onclick = (e) => {
+                    const btn = e.target.closest('button[data-page]');
+                    if (btn) performSearch(btn.dataset.page);
+                };
+                pagContainer.onchange = (e) => {
+                    if (e.target.id === 'goToPageInput') {
+                        let v = parseInt(e.target.value);
+                        const max = parseInt(e.target.max);
+                        if (isNaN(v) || v < 1) v = 1; if (v > max) v = max;
+                        e.target.value = v; performSearch(v);
+                    }
+                };
+            }
+            // --- KEYBOARD SHORTCUTS ---
+            document.addEventListener('keydown', function (e) {
+                const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
+
+                if (e.key === 'Escape') {
+                    const openModals = document.querySelectorAll('.fixed:not(.hidden)');
+                    if (openModals.length > 0) {
+                        openModals.forEach(m => m.classList.add('hidden'));
+                    } else if (inInput) {
+                        document.activeElement.blur();
+                    }
+                }
+
+                if (e.altKey) {
+                    const map = {
+                        'f': 'toggleFilterBtn',
+                        's': 'searchInput',
+                        'e': 'exportBtn',
+                        'r': 'resetFilterBtn',
+                        't': 'themeToggle'
+                    };
+                    const key = e.key.toLowerCase();
+                    if (map[key]) {
+                        const btn = document.getElementById(map[key]);
+                        if (btn) {
+                            e.preventDefault();
+                            if (key === 's') btn.focus();
+                            else btn.click();
+                        }
+                    }
+                }
+
+                if (!inInput && e.key === '/') {
+                    e.preventDefault();
+                    document.getElementById('searchInput').focus();
+                }
+            });
+
+            // INITIALIZATION
+            attachRowEvents(); applyColumnConfig(); updateSelectionUI();
+        });
+    </script>
+}
