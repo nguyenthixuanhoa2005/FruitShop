@@ -114,7 +114,7 @@
                               var price = item.Product?.FinalPrice ?? 0;
                               var total = price * (item.Quantity ?? 1);
 
-                              <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom" data-product-item data-product-id="@item.ProductId">
+                              <div class="d-flex justify-content-between align-items-start mb-3 pb-3 border-bottom" data-product-item data-product-id="@item.ProductId">
                                    <div class="d-flex align-items-center gap-3">
                                         <div class="bg-light rounded p-1" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
                                              @{
@@ -124,14 +124,14 @@
                                              }
                                              <img src="@productImageUrl" alt="@item.Product?.Name" style="width: 100%; height: 100%; object-fit: contain;">
                                         </div>
-                                        <div>
-                                             <p class="mb-1 fw-bold small">@item.Product?.Name</p>
-                                             <small class="text-muted">x<span data-item-quantity>@item.Quantity</span></small>
+                                        <div style="max-width: 180px;">
+                                             <p class="mb-0 fw-bold small text-truncate">@item.Product?.Name</p>
+                                             <small class="text-muted">SL: <span data-item-quantity>@item.Quantity</span> x @price.ToString("N0")đ</small>
                                         </div>
                                    </div>
                                    <div class="text-end">
-                                        <p class="mb-1 fw-bold" data-item-total>@total.ToString("N0") đ</p>
-                                        <small class="text-muted" data-item-price>@price.ToString("N0") đ</small>/cái
+                                        <p class="mb-0 fw-bold text-success small" data-item-total>@total.ToString("N0")đ</p>
+                                        <span class="d-none" data-item-price>@price</span>
                                    </div>
                               </div>
                          }

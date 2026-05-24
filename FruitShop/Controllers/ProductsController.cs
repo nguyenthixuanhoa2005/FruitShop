@@ -235,6 +235,33 @@ namespace FruitShop.Controllers
                return View(pagedProducts);
           }
 
+          public async Task<IActionResult> Promotions(int page = 1)
+          {
+               int pageSize = 12;
+
+               // 1. Lấy danh sách sản phẩm có giảm giá (> 0%)
+               var query = _context.Products
+                    .Include(p => p.ProductImages)
+                    .Include(p => p.Reviews)
+                    .Where(p => p.Status == 1 && (p.DiscountPercent ?? 0) > 0)
+                    .OrderByDescending(p => p.DiscountPercent);
+
+               int totalItems = await query.CountAsync();
+               int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+               var discountedProducts = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+               // 2. Lấy danh sách các mã giảm giá còn hiệu lực
+               var activeCoupons = await _context.Coupons
+                    .Where(c => c.Status == 1 && c.EndDate >= DateTime.Now && (c.UsageLimit == null || c.UsedCount < c.UsageLimit))
+                    .ToListAsync();
+
+               ViewBag.Coupons = activeCoupons;
+               ViewBag.CurrentPage = page;
+               ViewBag.TotalPages = totalPages;
+
+               return View(discountedProducts);
+          }
+
           private void AddCategoryAndChildren(int parentId, List<Category> allCategories, List<int> result)
           {
                if (!result.Contains(parentId)) result.Add(parentId);

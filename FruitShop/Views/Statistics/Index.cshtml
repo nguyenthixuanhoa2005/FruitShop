@@ -90,18 +90,18 @@
     <div class="row g-4">
         <!-- Top Customers Table -->
         <div class="col-lg-12">
-            <div class="premium-card">
-                <div class="card-head p-4 border-bottom border-strong">
-                    <h5 class="fw-bold mb-0">Khách hàng tiêu biểu (Top Buyers)</h5>
+            <div class="premium-card overflow-hidden">
+                <div class="card-head p-4 border-bottom border-strong bg-primary text-white">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-people-fill me-2"></i>Khách hàng tiêu biểu (Top Buyers)</h5>
                 </div>
                 <div class="table-responsive">
-                    <table class="table align-middle mb-0">
-                        <thead class="bg-soft-light">
-                            <tr>
-                                <th class="ps-4 py-3 theme-contrast">Khách hàng</th>
-                                <th class="py-3 theme-contrast">Email</th>
-                                <th class="py-3 text-center theme-contrast">Số đơn đã đặt</th>
-                                <th class="py-3 text-end pe-4 ">Tổng chi tiêu</th>
+                    <table class="table align-middle mb-0 table-blue-theme">
+                        <thead>
+                            <tr class="bg-blue-dark text-white">
+                                <th class="ps-4 py-3 border-0">Khách hàng</th>
+                                <th class="py-3 border-0">Email</th>
+                                <th class="py-3 text-center border-0">Số đơn đã đặt</th>
+                                <th class="py-3 text-end pe-4 border-0">Tổng chi tiêu</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -110,13 +110,13 @@
                                 <tr>
                                     <td class="ps-4">
                                         <div class="d-flex align-items-center">
-                                            <div class="avatar-circle me-3">@c.FullName.Substring(0, 1)</div>
+                                            <div class="avatar-circle-blue me-3">@c.FullName.Substring(0, 1)</div>
                                             <span class="fw-bold">@c.FullName</span>
                                         </div>
                                     </td>
                                     <td>@c.Email</td>
                                     <td class="text-center">@c.OrderCount</td>
-                                    <td class="text-end pe-4 fw-extrabold text-primary">@c.TotalSpent.ToString("N0")đ</td>
+                                    <td class="text-end pe-4 fw-extrabold text-blue-deep">@c.TotalSpent.ToString("N0")đ</td>
                                 </tr>
                             }
                         </tbody>
@@ -192,4 +192,42 @@
     .icon-box { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
     .avatar-circle { width: 35px; height: 35px; background: var(--nav-active-bg); color: var(--accent-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 1px solid var(--border-strong); }
     .border-strong { border-color: var(--border-strong) !important; }
+
+    /* Blue Theme Table Styles */
+    .table-blue-theme {
+        color: #0d6efd !important; /* Màu xanh nước biển cho toàn bộ chữ trong bảng */
+    }
+    .table-blue-theme thead tr.bg-blue-dark {
+        background-color: #0d6efd !important;
+        color: white !important; /* Giữ tiêu đề màu trắng trên nền xanh cho dễ đọc */
+    }
+    .table-blue-theme tbody tr td {
+        color: #0d6efd !important;
+    }
+    .table-blue-theme tbody tr td span, 
+    .table-blue-theme tbody tr td div {
+        color: #0d6efd !important;
+    }
+    .table-blue-theme tbody tr:nth-child(even) {
+        background-color: rgba(13, 110, 253, 0.05);
+    }
+    .table-blue-theme tbody tr:hover {
+        background-color: rgba(13, 110, 253, 0.1) !important;
+        transition: background-color 0.2s ease;
+    }
+    .avatar-circle-blue {
+        width: 35px;
+        height: 35px;
+        background: #e7f1ff;
+        color: #0d6efd;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        border: 1px solid #0d6efd;
+    }
+    .text-blue-deep {
+        color: #0a58ca !important;
+    }
 </style>
