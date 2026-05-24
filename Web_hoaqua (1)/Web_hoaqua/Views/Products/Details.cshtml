@@ -1,0 +1,624 @@
+﻿@model Web_hoaqua.Models.Product
+
+@{
+     ViewData["Title"] = Model?.Name ?? "Chi tiết sản phẩm";
+     var approvedReviews = Model?.Reviews?.Where(r => r.Status == 1 && r.Rating.HasValue).ToList() ?? new List<Web_hoaqua.Models.Review>();
+     var reviewCount = approvedReviews.Count;
+     var averageRating = reviewCount > 0 ? approvedReviews.Average(r => r.Rating!.Value) : 0;
+     var fullStars = (int)Math.Floor(averageRating);
+     var hasHalfStar = averageRating - fullStars >= 0.5;
+     var relatedProducts = ViewBag.RelatedProducts as List<Web_hoaqua.Models.Product> ?? new List<Web_hoaqua.Models.Product>();
+
+     var productImageUrl = Model?.ProductImages?.FirstOrDefault()?.ImageUrl;
+}
+
+<div class="container py-5">
+     <!-- Breadcrumb điều hướng -->
+     <nav aria-label="breadcrumb" class="mb-5 pb-3 border-bottom">
+         <ol class="breadcrumb mb-0">
+             <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-decoration-none text-muted" style="font-size: 1.0rem;">Trang chủ</a></li>
+
+             @if (ViewBag.BreadcrumbCategories != null)
+             {
+                 foreach (var cat in ViewBag.BreadcrumbCategories as List<Web_hoaqua.Models.Category>)
+                 {
+                     <li class="breadcrumb-item">
+                         <a asp-controller="Products" asp-action="Index" asp-route-categoryId="@cat.Id" class="text-decoration-none text-muted" style="font-size: 1.0rem;">@cat.Name</a>
+                     </li>
+                 }
+             }
+             <li class="breadcrumb-item active text-success fw-bold" aria-current="page" style="font-size: 1.0rem;">@Model?.Name</li>
+         </ol>
+     </nav>
+     <div class="row g-5">
+          <!-- Cột trái: Hình ảnh -->
+          <div class="col-lg-5">
+               <div class="product-detail-img-wrap shadow-sm mb-4">
+                    @if (!string.IsNullOrWhiteSpace(productImageUrl))
+                    {
+                         <img src="@productImageUrl" class="img-fluid w-100 product-main-img p-4" alt="@Model?.Name">
+                    }
+                    else
+                    {
+                         <div class="w-100 d-flex align-items-center justify-content-center text-muted" style="aspect-ratio: 1/1;">
+                              <i class="fas fa-image fs-2"></i>
+                         </div>
+                    }
+               </div>
+               
+               <!-- Các cam kết dịch vụ -->
+               <div class="row g-3 text-center mt-2">
+                    <div class="col-4">
+                         <div class="product-benefit-icon mx-auto"><i class="fas fa-shipping-fast"></i></div>
+                         <p class="small fw-bold mb-0">Giao hàng 2h</p>
+                    </div>
+                    <div class="col-4">
+                         <div class="product-benefit-icon mx-auto"><i class="fas fa-undo"></i></div>
+                         <p class="small fw-bold mb-0">Đổi trả 24h</p>
+                    </div>
+                    <div class="col-4">
+                         <div class="product-benefit-icon mx-auto"><i class="fas fa-shield-alt"></i></div>
+                         <p class="small fw-bold mb-0">100% Sạch</p>
+                    </div>
+               </div>
+          </div>
+
+          <!-- Cột phải: Thông tin -->
+          <div class="col-lg-7">
+               <h1 class="display-6 fw-bold mb-2">@Model?.Name</h1>
+               
+               <div class="d-flex align-items-center gap-3 mb-4">
+                    <div class="product-rating">
+                         <div class="rating-stars" aria-label="@averageRating.ToString("0.0") trên 5 sao">
+                              @for (int s = 1; s <= 5; s++)
+                              {
+                                   if (s <= fullStars) { <i class="fas fa-star" style="color: #f2b01e;"></i> }
+                                   else if (s == fullStars + 1 && hasHalfStar) { <i class="fas fa-star-half-alt" style="color: #f2b01e;"></i> }
+                                   else { <i class="far fa-star" style="color: #d6d6d6;"></i> }
+                              }
+                         </div>
+                         <span class="rating-text">@averageRating.ToString("0.0")</span>
+                    </div>
+                    <span class="text-muted border-start ps-3">@reviewCount đánh giá</span>
+                    <span class="text-muted border-start ps-3">Xuất xứ: <strong class="text-dark">@Model?.Origin</strong></span>
+               </div>
+
+               <!-- Khung giá -->
+               <div class="p-3 mb-4 rounded-4" style="background: #f0f9eb;">
+                    @if (Model.DiscountPercent > 0)
+                    {
+                         <div class="d-flex align-items-baseline gap-3">
+                              <span id="finalPriceDisplay" class="text-success fw-bold" style="font-size: 2.2rem;" data-base-price="@Model.FinalPrice">
+                                   @Model.FinalPrice?.ToString("N0") đ
+                              </span>
+                              <span id="originalPriceDisplay" class="text-muted text-decoration-line-through fs-5" data-base-price="@Model.Price">
+                                   @Model.Price?.ToString("N0") đ
+                              </span>
+                              <span class="badge bg-danger rounded-2 px-2 py-1" style="font-size: 0.85rem; position: relative; top: -5px;">
+                                   -@Math.Round(Model.DiscountPercent.Value)%
+                              </span>
+                         </div>
+                    }
+                    else
+                    {
+                         <span id="finalPriceDisplay" class="text-success fw-bold" style="font-size: 2.2rem;" data-base-price="@Model.Price">
+                              @Model?.Price?.ToString("N0") đ
+                         </span>
+                    }
+               </div>
+
+               <!-- Thông tin bổ sung -->
+               <div class="mb-4">
+                    <div class="row g-2 product-meta-grid">
+                         <div class="col-6">
+                              <div class="product-meta-card">
+                                   <span class="product-meta-label">Đơn vị</span>
+                                   <strong class="product-meta-value text-dark">@Model?.Unit</strong>
+                              </div>
+                         </div>
+                         <div class="col-6">
+                              <div class="product-meta-card">
+                                   <span class="product-meta-label">Tình trạng</span>
+                                   <strong class="product-meta-value @(Model?.StockQuantity > 0 ? "text-success" : "text-danger")">
+                                        @(Model?.StockQuantity > 0 ? "Còn hàng (" + Model.StockQuantity + ")" : "Hết hàng")
+                                   </strong>
+                              </div>
+                         </div>
+                    </div>
+               </div>
+
+               <!-- Điều khiển số lượng & Nút bấm -->
+               <div class="d-flex flex-wrap align-items-center gap-3 mb-5 mt-5">
+                    <div class="quantity-picker-detail">
+                         <button class="btn btn-outline-success rounded-circle" type="button" onclick="decreaseQuantity()" style="width: 38px; height: 38px; padding: 0;">
+                              <i class="fas fa-minus"></i>
+                         </button>
+                         <input type="number" class="product-quantity-detail text-center" value="1" min="1" onchange="updateTotalPrice()" style="width: 50px; border: none; font-weight: 700; background: transparent; -moz-appearance: textfield;" onkeypress="return event.charCode >= 48 && event.charCode <= 57" onblur="if(this.value < 1 || this.value === '') { this.value = 1; updateTotalPrice(); }">
+                         <button class="btn btn-outline-success rounded-circle" type="button" onclick="increaseQuantity()" style="width: 38px; height: 38px; padding: 0;">
+                              <i class="fas fa-plus"></i>
+                         </button>
+                    </div>
+
+                    <button class="btn btn-outline-success rounded-pill fw-bold px-4 py-2 product-buy-action" 
+                         style="height: 48px; border-width: 2px;"
+                         type="button" onclick="addToCartDetail(@Model?.Id, '@Model?.Name')">
+                         <i class="fas fa-cart-plus me-2"></i>Thêm vào giỏ
+                    </button>
+
+                    <button class="btn-buy-now product-buy-action" 
+                         style="margin: 0; height: 48px;"
+                         type="button" onclick="quickBuyDetail(@Model?.Id, '@Model?.Name')">
+                         <i class="fas fa-bolt me-2"></i> Mua ngay
+                    </button>
+               </div>
+
+               <!-- Tabs Thông tin -->
+               <div class="product-info-tabs">
+                    <ul class="nav nav-tabs border-bottom" id="productTab" role="tablist">
+                         <li class="nav-item" role="presentation">
+                         <button class="nav-link active" id="desc-tab" data-bs-toggle="tab" data-bs-target="#desc" type="button" role="tab">Mô tả sản phẩm</button>
+                         </li>
+                         <li class="nav-item" role="presentation">
+                         <button class="nav-link" id="review-tab" data-bs-toggle="tab" data-bs-target="#review" type="button" role="tab">Đánh giá (@reviewCount)</button>
+                         </li>
+                    </ul>
+                    <div class="tab-content py-4" id="productTabContent">
+                         <div class="tab-pane fade show active" id="desc" role="tabpanel">
+                         <div class="text-muted lh-lg">
+                              @if (!string.IsNullOrEmpty(Model?.Description))
+                              {
+                                   @Model.Description
+                              }
+                              else
+                              {
+                                   <p>Sản phẩm trái cây nhập khẩu tươi ngon, đảm bảo tiêu chuẩn an toàn thực phẩm VietGAP và GlobalGAP.</p>
+                              }
+                         </div>
+                         </div>
+                         <div class="tab-pane fade" id="review" role="tabpanel">
+                         @if (reviewCount > 0)
+                         {
+                              <div class="review-list-scroll pe-2">
+                                   @foreach (var review in approvedReviews)
+                                   {
+                                        <div class="mb-4 pb-4 border-bottom">
+                                             <div class="d-flex align-items-center gap-2 mb-2">
+                                                  <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                                  @(review.User?.FullName?.Substring(0, 1) ?? "K")
+                                                  </div>
+                                                  <strong class="text-dark">@(review.User?.FullName ?? "Khách hàng")</strong>
+                                                  <span class="text-muted small ms-auto">@review.CreatedAt?.ToString("dd/MM/yyyy")</span>
+                                             </div>
+                                             <div class="text-warning mb-2">
+                                                  @for (int s = 1; s <= 5; s++)
+                                                  {
+                                                  <i class="@(s <= review.Rating ? "fas" : "far") fa-star small"></i>
+                                                  }
+                                             </div>
+                                             <p class="text-muted mb-0">@review.Comment</p>
+                                        </div>
+                                   }
+                              </div>
+                         }
+                         else
+                         {
+                              <p class="text-muted">Chưa có đánh giá nào cho sản phẩm này.</p>
+                         }
+                         </div>
+                    </div>
+               </div>
+          </div>
+     </div>
+
+     <!-- Sản phẩm liên quan -->
+     <div class="mt-5 pt-5">
+          <div class="d-flex align-items-center justify-content-between mb-4">
+               <h3 class="fw-bold m-0">Sản phẩm liên quan</h3>
+               <a asp-controller="Products" asp-action="Index" asp-route-relatedTo="@Model?.Id" class="text-success text-decoration-none fw-bold">Xem tất cả <i class="fas fa-chevron-right ms-1"></i></a>
+          </div>
+          <div class="row g-4">
+               @if (relatedProducts.Any())
+               {
+                    @foreach (var related in relatedProducts)
+                    {
+                         var relatedImageUrl = related.ProductImages?.FirstOrDefault()?.ImageUrl;
+                         var relatedApprovedReviews = related.Reviews?.Where(r => r.Status == 1 && r.Rating.HasValue).ToList() ?? new List<Web_hoaqua.Models.Review>();
+                         var relatedReviewCount = relatedApprovedReviews.Count;
+                         var relatedAverageRating = relatedReviewCount > 0 ? relatedApprovedReviews.Average(r => r.Rating!.Value) : 0;
+                         var relatedFullStars = (int)Math.Floor(relatedAverageRating);
+
+                         <div class="col-6 col-md-4 col-lg-3">
+                              <div class="card h-100 border-0 shadow-sm product-card">
+                                   <a asp-controller="Products" asp-action="Details" asp-route-id="@related.Id" class="text-decoration-none text-dark">
+                                        <div class="position-relative overflow-hidden product-image-wrap">
+                                             @if (!string.IsNullOrWhiteSpace(relatedImageUrl))
+                                             {
+                                                  <img src="@relatedImageUrl" class="card-img-top p-3 product-image" alt="@related.Name" style="aspect-ratio: 1/1; object-fit: contain;">
+                                             }
+                                             else
+                                             {
+                                                  <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted" style="aspect-ratio: 1/1;">
+                                                       <i class="fas fa-image"></i>
+                                                  </div>
+                                             }
+                                             @if (related.DiscountPercent > 0)
+                                             {
+                                                  <span class="product-discount-badge">-@Math.Round(related.DiscountPercent.Value)%</span>
+                                             }
+                                        </div>
+                                        <div class="card-body text-center pt-0 product-body">
+                                             <p class="text-muted small mb-1">@related.Origin</p>
+                                             <h6 class="card-title fw-bold mb-2 product-title">@related.Name</h6>
+                                             <div class="product-rating mb-2">
+                                                  @if (relatedReviewCount > 0)
+                                                  {
+                                                       <div class="rating-stars" aria-label="@relatedAverageRating.ToString("0.0") trên 5 sao">
+                                                            @for (int s = 1; s <= 5; s++)
+                                                            {
+                                                                 if (s <= relatedFullStars)
+                                                                 {
+                                                                      <span class="star star-full">&#9733;</span>
+                                                                 }
+                                                                 else
+                                                                 {
+                                                                      <span class="star star-empty">&#9734;</span>
+                                                                 }
+                                                            }
+                                                       </div>
+                                                       <span class="rating-text">@relatedAverageRating.ToString("0.0")</span>
+                                                  }
+                                                  else
+                                                  {
+                                                       <span class="rating-text text-muted">Chưa có đánh giá</span>
+                                                  }
+                                             </div>
+                                             <div class="mb-2 product-price">
+                                                  @if (related.DiscountPercent > 0)
+                                                  {
+                                                       <span class="text-success fw-bold">@related.FinalPrice?.ToString("N0") đ</span>
+                                                       <span class="text-muted text-decoration-line-through small ms-2">@related.Price?.ToString("N0") đ</span>
+                                                  }
+                                                  else
+                                                  {
+                                                       <span class="text-success fw-bold">@related.Price?.ToString("N0") đ</span>
+                                                  }
+                                             </div>
+                                        </div>
+                                   </a>
+                              </div>
+                         </div>
+                    }
+               }
+               else
+               {
+                    <div class="col-12">
+                         <p class="text-muted small mb-0">Chưa có sản phẩm liên quan phù hợp.</p>
+                    </div>
+               }
+          </div>
+     </div>
+</div>
+
+<script>
+     // Variable to store details for the current add to cart action
+     let currentAddToCartDetails = null; 
+
+     // Function to update total price based on quantity
+     function updateTotalPrice() {
+          const quantity = parseInt(document.querySelector('.product-quantity-detail').value) || 1;
+          const finalPriceElem = document.getElementById('finalPriceDisplay');
+          const originalPriceElem = document.getElementById('originalPriceDisplay');
+
+          if (finalPriceElem) {
+               const baseFinalPrice = parseFloat(finalPriceElem.getAttribute('data-base-price')) || 0;
+               const totalFinal = baseFinalPrice * quantity;
+               finalPriceElem.textContent = totalFinal.toLocaleString('vi-VN') + ' đ';
+          }
+
+          if (originalPriceElem) {
+               const baseOriginalPrice = parseFloat(originalPriceElem.getAttribute('data-base-price')) || 0;
+               const totalOriginal = baseOriginalPrice * quantity;
+               originalPriceElem.textContent = totalOriginal.toLocaleString('vi-VN') + ' đ';
+          }
+     }
+
+     function increaseQuantity() {
+          const input = document.querySelector('.product-quantity-detail');
+          input.value = parseInt(input.value) + 1;
+          updateTotalPrice();
+     }
+
+     function decreaseQuantity() {
+          const input = document.querySelector('.product-quantity-detail');
+          if (parseInt(input.value) > 1) {
+               input.value = parseInt(input.value) - 1;
+               updateTotalPrice();
+          }
+     }
+
+     // Modified addToCartDetail to use Bootstrap Modal for confirmation
+     function addToCartDetail(productId, productName) {
+          const quantity = parseInt(document.querySelector('.product-quantity-detail').value) || 1;
+
+          if (!isAuthenticated) {
+               localStorage.setItem('pendingCartItem', JSON.stringify({ productId, productName, quantity }));
+               showLoginRequiredModal('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.');
+               return;
+          }
+
+          // Store details globally for modal confirmation handler
+          currentAddToCartDetails = { productId, productName, quantity, btn: null }; // btn is not directly available here, might need to pass it or find it differently if needed for reset
+
+          // Populate modal with product name
+          const modalProductNameEl = document.getElementById('modalProductName');
+          if (modalProductNameEl) {
+               modalProductNameEl.textContent = productName;
+          }
+
+          // Show the Bootstrap modal
+          const modal = new bootstrap.Modal(document.getElementById('addToCartConfirmationModal'));
+          modal.show();
+     }
+
+     function handleConfirmAddToCart() {
+          const modalElement = document.getElementById('addToCartConfirmationModal');
+          const modal = bootstrap.Modal.getInstance(modalElement);
+          if (modal) {
+               modal.hide(); // Hide modal first
+          }
+
+          if (!currentAddToCartDetails) return; // Should not happen
+
+          const { productId, productName, quantity } = currentAddToCartDetails;
+
+          console.log('Proceeding to AddToCart:', { productId, productName, quantity });
+
+          // Proceed with the fetch request now that user confirmed
+          fetch('/Cart/AddToCart', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ productId: productId, quantity: quantity })
+          })
+          .then(response => {
+               console.log('Response status:', response.status);
+               return response.json();
+          })
+          .then(data => {
+               console.log('Response data:', data);
+               if (data.success) {
+                    // Show success notification using SweetAlert2 Toast
+                    Swal.fire({
+                        icon: 'success',
+                              title: 'Đã thêm sản phẩm',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                              timer: 1200,
+                              timerProgressBar: true
+                    });
+                    // Reset quantity input
+                    const quantityInput = document.querySelector('.product-quantity-detail');
+                    if(quantityInput) quantityInput.value = 1;
+
+                    // Update cart count if function exists
+                    if (typeof updateCartCount === 'function') {
+                        updateCartCount();
+                    }
+                    console.log('Giỏ hàng hiện có:', data.cartCount, 'sản phẩm');
+               } else {
+                    // Handle login requirement
+                    if (data.requireLogin) {
+                        localStorage.setItem('pendingCartItem', JSON.stringify({ productId, productName, quantity }));
+                                     showLoginRequiredModal('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.');
+                    } else {
+                        // Show error notification using SweetAlert2 Toast
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi!',
+                            text: data.message || 'Không thể thêm vào giỏ hàng',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true,
+                            didOpen: (toast) => {
+                                toast.addEventListener('mouseenter', Swal.stopTimer)
+                                toast.addEventListener('mouseleave', Swal.resumeTimer)
+                            }
+                        });
+                    }
+               }
+          })
+          .catch(error => {
+               console.error('Error:', error);
+               // Show general error notification using SweetAlert2 Toast
+               Swal.fire({
+                   icon: 'error',
+                   title: 'Lỗi!',
+                   text: 'Có lỗi xảy ra khi thêm vào giỏ hàng',
+                   toast: true,
+                   position: 'top-end',
+                   showConfirmButton: false,
+                   timer: 3000,
+                   timerProgressBar: true,
+                   didOpen: (toast) => {
+                       toast.addEventListener('mouseenter', Swal.stopTimer)
+                       toast.addEventListener('mouseleave', Swal.resumeTimer)
+                   }
+               });
+          });
+          
+          currentAddToCartDetails = null; // Clear stored details after action
+     }
+
+     // Modal nằm sau thẻ script, nên cần bind sự kiện sau khi DOM đã render xong.
+     document.addEventListener('DOMContentLoaded', function () {
+          const confirmButton = document.getElementById('confirmAddToCartButton');
+          if (confirmButton) {
+               confirmButton.addEventListener('click', handleConfirmAddToCart);
+          }
+     });
+
+     // Revert showToast to use SweetAlert2 as it's preferred for toasts
+     function showToast(message, type) {
+          const iconMap = { success: 'success', warning: 'warning', error: 'error', info: 'info' };
+          Swal.fire({
+              icon: iconMap[type] || 'info',
+              title: message,
+              toast: true,
+              position: 'top-end',
+              showConfirmButton: false,
+              timer: 3000,
+              timerProgressBar: true,
+              didOpen: (toast) => {
+                  toast.addEventListener('mouseenter', Swal.stopTimer)
+                  toast.addEventListener('mouseleave', Swal.resumeTimer)
+              }
+          });
+     }
+
+     function quickBuyDetail(productId, productName) {
+          const quantity = parseInt(document.querySelector('.product-quantity-detail').value) || 1;
+
+          if (!isAuthenticated) { // Assuming isAuthenticated is a global JS variable
+               localStorage.setItem('pendingQuickBuyProduct', productId);
+               localStorage.setItem('pendingQuickBuyQuantity', quantity);
+               showLoginRequiredModal('Vui lòng đăng nhập để mua sản phẩm.');
+               return;
+          }
+
+          fetch('/Cart/AddToCart', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ productId: productId, quantity: quantity })
+          })
+          .then(response => response.json())
+          .then(data => {
+               if (data.success) {
+                    sessionStorage.setItem('selectedProducts', JSON.stringify([productId]));
+                    window.location.href = '/Cart/Checkout?selectedItems=' + productId;
+               } else if (data.requireLogin) {
+                    localStorage.setItem('pendingQuickBuyProduct', productId);
+                    localStorage.setItem('pendingQuickBuyQuantity', quantity);
+                    showLoginRequiredModal('Vui lòng đăng nhập để mua sản phẩm.');
+               } else {
+                    showToast(data.message || 'Không thể mua ngay lúc này', 'error');
+               }
+          })
+          .catch(error => {
+               console.error('Quick buy error:', error);
+               showToast('Có lỗi xảy ra khi mua ngay', 'error');
+          });
+     }
+</script>
+
+<style>
+     /* Styles for product cards, ratings, pagination, etc. */
+     .review-list-scroll {
+          max-height: 420px;
+          overflow-y: auto;
+          overflow-x: hidden;
+     }
+
+     .review-list-scroll::-webkit-scrollbar {
+          width: 6px;
+     }
+
+     .review-list-scroll::-webkit-scrollbar-thumb {
+          background: #c8d8ca;
+          border-radius: 999px;
+     }
+
+     .review-list-scroll::-webkit-scrollbar-thumb:hover {
+          background: #a9c3ad;
+     }
+     .product-card { transition: all 0.3s ease; border-radius: 15px; }
+     .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; }
+     .product-image-wrap { background: #f9fff5; height: 220px; display: flex; align-items: center; justify-content: center; }
+     .product-image { max-height: 100%; object-fit: contain; }
+     .product-meta-card {
+          border: 1px solid #e4ebe5;
+          border-radius: 10px;
+          background: #fbfdfb;
+          padding: 10px 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+          min-height: 68px;
+          justify-content: center;
+     }
+     .product-meta-label {
+          font-size: 0.78rem;
+          color: #8a97a7;
+          line-height: 1.15;
+     }
+     .product-meta-value {
+          font-size: 1rem;
+          line-height: 1.25;
+          font-weight: 700;
+     }
+     .quantity-picker-detail {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          height: 48px;
+     }
+     .product-quantity-detail {
+          width: 50px;
+          height: 100%;
+          border: none;
+          text-align: center;
+          font-weight: 700;
+          font-size: 1.2rem;
+          color: #198754;
+          background: transparent;
+          -moz-appearance: textfield;
+          outline: none;
+     }
+     .product-quantity-detail::-webkit-outer-spin-button,
+     .product-quantity-detail::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+     }
+     .product-buy-action {
+          width: auto;
+          min-width: 190px;
+          white-space: nowrap;
+     }
+     @@media (max-width: 576px) {
+          .product-buy-action {
+               width: auto;
+               min-width: 165px;
+          }
+     }
+     .product-title { min-height: 40px; font-size: 0.95rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+     .product-discount-badge { position: absolute; top: 0; left: 0; background: #2fa95b; color: #fff; font-size: 0.7rem; font-weight: 700; padding: 5px 10px; border-radius: 0 0 10px 0; }
+     .star { font-size: 0.9rem; }
+     .star-full { color: #f2b01e; }
+     .star-empty { color: #d6d6d6; }
+     .page-item.active .page-link { background-color: #198754; color: white; }
+     .page-link { color: #198754; }
+     .product-quantity { border: 1px solid #dee2e6; border-radius: 5px; padding: 5px; text-align: center; -moz-appearance: textfield; }
+     .product-quantity::-webkit-outer-spin-button,
+     .product-quantity::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+     .product-quantity:focus { border-color: #198754; box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.15); outline: none; }
+</style>
+
+<!-- Bootstrap Modal for Add to Cart Confirmation -->
+<div class="modal fade" id="addToCartConfirmationModal" tabindex="-1" aria-labelledby="addToCartConfirmationModalLabel" aria-hidden="true">
+     <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+               <div class="modal-header">
+                    <h5 class="modal-title" id="addToCartConfirmationModalLabel">Xác nhận thêm vào giỏ hàng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+               </div>
+               <div class="modal-body">
+                    Bạn có muốn thêm sản phẩm <strong id="modalProductName"></strong> vào giỏ hàng không?
+               </div>
+               <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="button" class="btn btn-primary" id="confirmAddToCartButton">Thêm vào giỏ hàng</button>
+               </div>
+          </div>
+     </div>
+</div>

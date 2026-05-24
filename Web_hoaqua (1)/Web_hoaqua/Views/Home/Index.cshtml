@@ -1,0 +1,694 @@
+﻿@model Web_hoaqua.Models.HomeViewModel
+@{
+    ViewData["Title"] = "Trang chủ";
+}
+
+<!-- Hero Banner Section -->
+<section class="hero-banner mb-5">
+    <div id="mainCarousel" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-indicators">
+            <button type="button" data-bs-target="#mainCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+            <button type="button" data-bs-target="#mainCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
+            <button type="button" data-bs-target="#mainCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
+            <button type="button" data-bs-target="#mainCarousel" data-bs-slide-to="3" aria-label="Slide 4"></button>
+        </div>
+        <div class="carousel-inner">
+            <div class="carousel-item active">
+                <img src="/Upload/slide_1_mb.png" class="d-block w-100" alt="Banner 1" style="height: 700px; object-fit: cover;">
+            </div>
+            <div class="carousel-item">
+                <img src="/Upload/slide_2_mb.png" class="d-block w-100" alt="Banner 2" style="height: 700px; object-fit: cover;">
+                <div class="carousel-caption top-50 translate-middle-y d-block text-start p-0 m-0" style="left: 10%;">
+                    <h1 class="display-2 fw-bold text-white mb-3" style="text-shadow: 2px 2px 15px rgba(0,0,0,0.6);">Sức Khỏe Mỗi Ngày</h1>
+                    <p class="fs-3 text-white mb-4" style="text-shadow: 1px 1px 8px rgba(0,0,0,0.6);">Cung cấp vitamin và dưỡng chất thiết yếu cho gia đình bạn.</p>
+                    <a href="#" class="btn btn-success btn-lg px-5 py-3 rounded-pill fw-bold shadow-lg">Xem Ưu Đãi</a>
+                </div>
+            </div>
+            <div class="carousel-item">
+                <img src="/Upload/slide_3_mb.png" class="d-block w-100" alt="Banner 3" style="height: 700px; object-fit: cover;">
+            </div>
+            <div class="carousel-item">
+                <img src="/Upload/slide_4_mb.jpg" class="d-block w-100" alt="Banner 4" style="height: 700px; object-fit: cover;">
+            </div>
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#mainCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#mainCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
+</section>
+
+<div class="container">
+    <!-- Why Choose Us -->
+    <section class="py-5 bg-pastel-green rounded-4 mb-5">
+        <div class="row g-4 text-center px-4">
+            <div class="col-6 col-lg-3">
+                <i class="fas fa-shipping-fast fs-2 text-success mb-3"></i>
+                <h5 class="fw-bold">Giao Hàng Nhanh</h5>
+                <p class="text-muted small mb-0">Giao hàng trong 2h tại nội thành.</p>
+            </div>
+            <div class="col-6 col-lg-3">
+                <i class="fas fa-check-circle fs-2 text-success mb-3"></i>
+                <h5 class="fw-bold">Chất Lượng</h5>
+                <p class="text-muted small mb-0">Kiểm định chất lượng nghiêm ngặt.</p>
+            </div>
+            <div class="col-6 col-lg-3">
+                <i class="fas fa-shield-alt fs-2 text-success mb-3"></i>
+                <h5 class="fw-bold">Hoàn Tiền 100%</h5>
+                <p class="text-muted small mb-0">Đổi trả hoặc hoàn tiền nếu không hài lòng.</p>
+            </div>
+            <div class="col-6 col-lg-3">
+                <i class="fas fa-headset fs-2 text-success mb-3"></i>
+                <h5 class="fw-bold">Hỗ Trợ 24/7</h5>
+                <p class="text-muted small mb-0">Sẵn sàng giải đáp mọi thắc mắc.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Products Section -->
+    <section class="mb-5">
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="rounded-4 overflow-hidden shadow-sm bestseller-banner-container" style="height: 350px;">
+                    <img src="/Upload/image_bestseller.jpg" class="w-100 h-100" alt="Bestseller Banner" style="object-fit: cover;">
+                </div>
+            </div>
+        </div>
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">Sản Phẩm Bán Chạy</h2>
+            <div class="bg-success mx-auto" style="height: 3px; width: 60px;"></div>
+        </div>
+        <div class="row g-4" id="featured-products-container">
+            @for (int i = 0; i < Model.FeaturedProducts.Count; i++)
+            {
+                var product = Model.FeaturedProducts[i];
+                var productImageUrl = product.ProductImages?.FirstOrDefault()?.ImageUrl;
+                var approvedReviews = product.Reviews?.Where(r => r.Status == 1 && r.Rating.HasValue).ToList() ?? new List<Web_hoaqua.Models.Review>();
+                var reviewCount = approvedReviews.Count;
+                var averageRating = reviewCount > 0 ? approvedReviews.Average(r => r.Rating!.Value) : 0;
+                var fullStars = (int)Math.Floor(averageRating);
+                var hasHalfStar = averageRating - fullStars >= 0.5;
+                //..
+                <div class="col-6 col-lg-3 product-item @(i >= 8 ? "d-none" : "")">
+                    <div class="card h-100 border-0 shadow-sm product-card">
+                        <div class="position-relative overflow-hidden product-image-wrap">
+                            <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id" class="d-block h-100">
+                                @if (!string.IsNullOrWhiteSpace(productImageUrl))
+                                {
+                                    <img src="@productImageUrl" class="card-img-top p-3 product-image" alt="@product.Name" style="aspect-ratio: 1/1; object-fit: contain;">
+                                }
+                                else
+                                {
+                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted" style="aspect-ratio: 1/1;">
+                                        <i class="fas fa-image"></i>
+                                    </div>
+                                }
+                            </a>
+                            @if (product.DiscountPercent > 0)
+                            {
+                                <span class="product-discount-badge">
+                                    -@Math.Round(product.DiscountPercent.Value)%
+                                </span>
+                            }
+                        </div>
+                        <div class="card-body text-center pt-0 product-body">
+                            <p class="text-muted small mb-1 product-origin">@product.Origin</p>
+                            <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id" class="text-decoration-none text-dark">
+                                <h6 class="card-title fw-bold mb-2 product-title">@product.Name</h6>
+                            </a>
+                            <div class="product-rating mb-2">
+                                @if (reviewCount > 0)
+                                {
+                                    <div class="rating-stars" aria-label="@averageRating.ToString("0.0") trên 5 sao">
+                                        @for (int s = 1; s <= 5; s++)
+                                        {
+                                            if (s <= fullStars)
+                                            {
+                                                <span class="star star-full">&#9733;</span>
+                                            }
+                                            else if (s == fullStars + 1 && hasHalfStar)
+                                            {
+                                                <span class="star star-half">&#9733;</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="star star-empty">&#9734;</span>
+                                            }
+                                        }
+                                    </div>
+                                    <span class="rating-text">@averageRating.ToString("0.0")</span>
+                                }
+                                else
+                                {
+                                    <span class="rating-text text-muted">Chưa có đánh giá</span>
+                                }
+                            </div>
+                            <div class="mb-3 product-price">
+                                @if (product.DiscountPercent > 0)
+                                {
+                                    <span class="text-success fw-bold fs-5">@product.FinalPrice?.ToString("N0") đ</span>
+                                    <span class="text-muted text-decoration-line-through small ms-2">@product.Price?.ToString("N0") đ</span>
+                                }
+                                else
+                                {
+                                    <span class="text-success fw-bold fs-5">@product.Price?.ToString("N0") đ</span>
+                                }
+                            </div>
+                            <button class="btn-buy-now" type="button" onclick="quickBuy(@product.Id, '@product.Name')">
+                                <i class="fas fa-bolt"></i>Mua ngay
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        @if (Model.FeaturedProducts.Count > 8)
+        {
+            <div class="text-center mt-5">
+                <button id="btn-see-more" class="btn btn-outline-success px-5 py-2 rounded-pill fw-bold">Xem Thêm</button>
+                <a asp-controller="Products" asp-action="Index" id="btn-view-all" class="btn btn-success px-5 py-2 rounded-pill fw-bold d-none">Xem Tất Cả</a>
+            </div>
+        }
+    </section>
+
+    <!-- Imported Fruits Section -->
+    <section class="mb-5">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">Trái Cây Nhập Khẩu</h2>
+            <div class="bg-success mx-auto" style="height: 3px; width: 60px;"></div>
+        </div>
+        <div class="row g-4">
+            @for (int i = 0; i < Model.ImportedFruits.Count; i++)
+            {
+                var product = Model.ImportedFruits[i];
+                var productImageUrl = product.ProductImages?.FirstOrDefault()?.ImageUrl;
+                var approvedReviews = product.Reviews?.Where(r => r.Status == 1 && r.Rating.HasValue).ToList() ?? new List<Web_hoaqua.Models.Review>();
+                var reviewCount = approvedReviews.Count;
+                var averageRating = reviewCount > 0 ? approvedReviews.Average(r => r.Rating!.Value) : 0;
+                var fullStars = (int)Math.Floor(averageRating);
+                var hasHalfStar = averageRating - fullStars >= 0.5;
+
+                <div class="col-6 col-lg-3 imported-item @(i >= 4 ? "d-none" : "")">
+                    <div class="card h-100 border-0 shadow-sm product-card">
+                        <div class="position-relative overflow-hidden product-image-wrap">
+                            <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id" class="d-block h-100">
+                                @if (!string.IsNullOrWhiteSpace(productImageUrl))
+                                {
+                                    <img src="@productImageUrl" class="card-img-top p-3 product-image" alt="@product.Name" style="aspect-ratio: 1/1; object-fit: contain;">
+                                }
+                                else
+                                {
+                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted" style="aspect-ratio: 1/1;">
+                                        <i class="fas fa-image"></i>
+                                    </div>
+                                }
+                            </a>
+                            @if (product.DiscountPercent > 0)
+                            {
+                                <span class="product-discount-badge">
+                                    -@Math.Round(product.DiscountPercent.Value)%
+                                </span>
+                            }
+                        </div>
+                        <div class="card-body text-center pt-0 product-body">
+                            <p class="text-muted small mb-1 product-origin">@product.Origin</p>
+                            <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id" class="text-decoration-none text-dark">
+                                <h6 class="card-title fw-bold mb-2 product-title">@product.Name</h6>
+                            </a>
+                            <div class="product-rating mb-2">
+                                @if (reviewCount > 0)
+                                {
+                                    <div class="rating-stars">
+                                        @for (int s = 1; s <= 5; s++)
+                                        {
+                                            if (s <= fullStars)
+                                            {
+                                                <span class="star star-full">&#9733;</span>
+                                            }
+                                            else if (s == fullStars + 1 && hasHalfStar)
+                                            {
+
+                                                <span class="star star-half">&#9733;</span>
+                                            }
+                                            else
+                                            {
+
+                                                <span class="star star-empty">&#9734;</span>
+                                            }
+                                        }
+                                    </div>
+                                    <span class="rating-text">@averageRating.ToString("0.0")</span>
+                                }
+                                else
+                                {
+
+                                    <span class="rating-text text-muted">Chưa có đánh giá</span>
+                                }
+                            </div>
+                            <div class="mb-3 product-price">
+                                @if (product.DiscountPercent > 0)
+                                {
+                                    <span class="text-success fw-bold fs-5">@product.FinalPrice?.ToString("N0") đ</span>
+                                    <span class="text-muted text-decoration-line-through small ms-2">@product.Price?.ToString("N0") đ</span>
+                                }
+                                else
+                                {
+
+                                    <span class="text-success fw-bold fs-5">@product.Price?.ToString("N0") đ</span>
+                                }
+                            </div>
+                            <button class="btn-buy-now" type="button" onclick="quickBuy(@product.Id, '@product.Name')">
+                                <i class="fas fa-shopping-cart"></i>Mua ngay
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        @if (Model.ImportedFruits.Count > 4)
+        {
+            <div class="text-center mt-5">
+                <button id="btn-see-more-imported" class="btn btn-outline-success px-5 py-2 rounded-pill fw-bold">Xem Thêm</button>
+                <a asp-controller="Products" asp-action="Index" asp-route-categoryId="1" id="btn-view-all-imported" class="btn btn-success px-5 py-2 rounded-pill fw-bold d-none">Xem Tất Cả</a>
+            </div>
+        }
+    </section>
+
+    <!-- Local Fruits Section -->
+    <section class="mb-5">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">Trái Cây Nội Địa</h2>
+            <div class="bg-success mx-auto" style="height: 3px; width: 60px;"></div>
+        </div>
+        <div class="row g-4">
+            @for (int i = 0; i < Model.LocalFruits.Count; i++)
+            {
+                var product = Model.LocalFruits[i];
+                var productImageUrl = product.ProductImages?.FirstOrDefault()?.ImageUrl;
+                var approvedReviews = product.Reviews?.Where(r => r.Status == 1 && r.Rating.HasValue).ToList() ?? new List<Web_hoaqua.Models.Review>();
+                var reviewCount = approvedReviews.Count;
+                var averageRating = reviewCount > 0 ? approvedReviews.Average(r => r.Rating!.Value) : 0;
+                var fullStars = (int)Math.Floor(averageRating);
+                var hasHalfStar = averageRating - fullStars >= 0.5;
+
+                <div class="col-6 col-lg-3 local-item @(i >= 4 ? "d-none" : "")">
+                    <div class="card h-100 border-0 shadow-sm product-card">
+                        <div class="position-relative overflow-hidden product-image-wrap">
+                            <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id" class="d-block h-100">
+                                @if (!string.IsNullOrWhiteSpace(productImageUrl))
+                                {
+                                    <img src="@productImageUrl" class="card-img-top p-3 product-image" alt="@product.Name" style="aspect-ratio: 1/1; object-fit: contain;">
+                                }
+                                else
+                                {
+                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted" style="aspect-ratio: 1/1;">
+                                        <i class="fas fa-image"></i>
+                                    </div>
+                                }
+                            </a>
+                            @if (product.DiscountPercent > 0)
+                            {
+                                <span class="product-discount-badge">
+                                    -@Math.Round(product.DiscountPercent.Value)%
+                                </span>
+                            }
+                        </div>
+                        <div class="card-body text-center pt-0 product-body">
+                            <p class="text-muted small mb-1 product-origin">@product.Origin</p>
+                            <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id" class="text-decoration-none text-dark">
+                                <h6 class="card-title fw-bold mb-2 product-title">@product.Name</h6>
+                            </a>
+                            <div class="product-rating mb-2">
+                                @if (reviewCount > 0)
+                                {
+                                    <div class="rating-stars">
+                                        @for (int s = 1; s <= 5; s++)
+                                        {
+                                            if (s <= fullStars)
+                                            {
+                                                <span class="star star-full">&#9733;</span>
+                                            }
+                                            else if (s == fullStars + 1 && hasHalfStar)
+                                            {
+
+                                                <span class="star star-half">&#9733;</span>
+                                            }
+                                            else
+                                            {
+
+                                                <span class="star star-empty">&#9734;</span>
+                                            }
+                                        }
+                                    </div>
+                                    <span class="rating-text">@averageRating.ToString("0.0")</span>
+                                }
+                                else
+                                {
+
+                                    <span class="rating-text text-muted">Chưa có đánh giá</span>
+                                }
+                            </div>
+                            <div class="mb-3 product-price">
+                                @if (product.DiscountPercent > 0)
+                                {
+                                    <span class="text-success fw-bold fs-5">@product.FinalPrice?.ToString("N0") đ</span>
+                                    <span class="text-muted text-decoration-line-through small ms-2">@product.Price?.ToString("N0") đ</span>
+                                }
+                                else
+                                {
+
+                                    <span class="text-success fw-bold fs-5">@product.Price?.ToString("N0") đ</span>
+                                }
+                            </div>
+                            <button class="btn-buy-now" type="button" onclick="quickBuy(@product.Id, '@product.Name')">
+                                <i class="fas fa-shopping-cart"></i>Mua ngay
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        @if (Model.LocalFruits.Count > 4)
+        {
+            <div class="text-center mt-5">
+                <button id="btn-see-more-local" class="btn btn-outline-success px-5 py-2 rounded-pill fw-bold">Xem Thêm</button>
+                <a asp-controller="Products" asp-action="Index" asp-route-categoryId="2" id="btn-view-all-local" class="btn btn-success px-5 py-2 rounded-pill fw-bold d-none">Xem Tất Cả</a>
+            </div>
+        }
+    </section>
+
+    <!-- Gift Fruits Section -->
+    <section class="mb-5">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">Quà Tặng Trái Cây</h2>
+            <div class="bg-success mx-auto" style="height: 3px; width: 60px;"></div>
+        </div>
+        <div class="row g-4">
+            @for (int i = 0; i < Model.GiftFruits.Count; i++)
+            {
+                var product = Model.GiftFruits[i];
+                var productImageUrl = product.ProductImages?.FirstOrDefault()?.ImageUrl;
+                var approvedReviews = product.Reviews?.Where(r => r.Status == 1 && r.Rating.HasValue).ToList() ?? new List<Web_hoaqua.Models.Review>();
+                var reviewCount = approvedReviews.Count;
+                var averageRating = reviewCount > 0 ? approvedReviews.Average(r => r.Rating!.Value) : 0;
+                var fullStars = (int)Math.Floor(averageRating);
+                var hasHalfStar = averageRating - fullStars >= 0.5;
+
+                <div class="col-6 col-lg-3 gift-item @(i >= 4 ? "d-none" : "")">
+                    <div class="card h-100 border-0 shadow-sm product-card">
+                        <div class="position-relative overflow-hidden product-image-wrap">
+                            <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id" class="d-block h-100">
+                                @if (!string.IsNullOrWhiteSpace(productImageUrl))
+                                {
+                                    <img src="@productImageUrl" class="card-img-top p-3 product-image" alt="@product.Name" style="aspect-ratio: 1/1; object-fit: contain;">
+                                }
+                                else
+                                {
+                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted" style="aspect-ratio: 1/1;">
+                                        <i class="fas fa-image"></i>
+                                    </div>
+                                }
+                            </a>
+                            @if (product.DiscountPercent > 0)
+                            {
+                                <span class="product-discount-badge">
+                                    -@Math.Round(product.DiscountPercent.Value)%
+                                </span>
+                            }
+                        </div>
+                        <div class="card-body text-center pt-0 product-body">
+                            <p class="text-muted small mb-1 product-origin">@product.Origin</p>
+                            <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id" class="text-decoration-none text-dark">
+                                <h6 class="card-title fw-bold mb-2 product-title">@product.Name</h6>
+                            </a>
+                            <div class="product-rating mb-2">
+                                @if (reviewCount > 0)
+                                {
+                                    <div class="rating-stars">
+                                        @for (int s = 1; s <= 5; s++)
+                                        {
+                                            if (s <= fullStars)
+                                            {
+                                                <span class="star star-full">&#9733;</span>
+                                            }
+                                            else if (s == fullStars + 1 && hasHalfStar)
+                                            {
+
+                                                <span class="star star-half">&#9733;</span>
+                                            }
+                                            else
+                                            {
+
+                                                <span class="star star-empty">&#9734;</span>
+                                            }
+                                        }
+                                    </div>
+                                    <span class="rating-text">@averageRating.ToString("0.0")</span>
+                                }
+                                else
+                                {
+
+                                    <span class="rating-text text-muted">Chưa có đánh giá</span>
+                                }
+                            </div>
+                            <div class="mb-3 product-price">
+                                @if (product.DiscountPercent > 0)
+                                {
+                                    <span class="text-success fw-bold fs-5">@product.FinalPrice?.ToString("N0") đ</span>
+                                    <span class="text-muted text-decoration-line-through small ms-2">@product.Price?.ToString("N0") đ</span>
+                                }
+                                else
+                                {
+
+                                    <span class="text-success fw-bold fs-5">@product.Price?.ToString("N0") đ</span>
+                                }
+                            </div>
+                            <button class="btn-buy-now" type="button" onclick="quickBuy(@product.Id, '@product.Name')">
+                                <i class="fas fa-shopping-cart"></i>Mua ngay
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        @if (Model.GiftFruits.Count > 4)
+        {
+            <div class="text-center mt-5">
+                <button id="btn-see-more-gift" class="btn btn-outline-success px-5 py-2 rounded-pill fw-bold">Xem Thêm</button>
+                <a asp-controller="Products" asp-action="Index" asp-route-categoryId="3" id="btn-view-all-gift" class="btn btn-success px-5 py-2 rounded-pill fw-bold d-none">Xem Tất Cả</a>
+            </div>
+        }
+    </section>
+
+</div>
+
+<script>
+    // Hàm thiết lập sự kiện cho nút Xem Thêm
+    function setupSeeMore(btnId, viewAllId, itemClass) {
+        document.getElementById(btnId)?.addEventListener('click', function() {
+            const hiddenItems = document.querySelectorAll('.' + itemClass + '.d-none');
+            // Hiện thêm tối đa 4 sản phẩm (thêm 1 hàng nữa)
+            for (let i = 0; i < 4 && i < hiddenItems.length; i++) {
+                hiddenItems[i].classList.remove('d-none');
+            }
+            
+            // Nếu không còn sản phẩm nào bị ẩn, thì ẩn nút Xem Thêm và hiện nút Xem Tất Cả
+            if (document.querySelectorAll('.' + itemClass + '.d-none').length === 0) {
+                this.classList.add('d-none');
+                document.getElementById(viewAllId)?.classList.remove('d-none');
+            }
+        });
+    }
+
+    // Thiết lập cho từng mục: Featured, Imported, Local, Gift
+    setupSeeMore('btn-see-more', 'btn-view-all', 'product-item');
+    setupSeeMore('btn-see-more-imported', 'btn-view-all-imported', 'imported-item');
+    setupSeeMore('btn-see-more-local', 'btn-view-all-local', 'local-item');
+    setupSeeMore('btn-see-more-gift', 'btn-view-all-gift', 'gift-item');
+
+    // Hàm hiển thị toast notification
+    function showToast(message, type) {
+        // Tạo container nếu chưa có
+        let toastContainer = document.getElementById('toastContainer');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toastContainer';
+            toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+            document.body.appendChild(toastContainer);
+        }
+
+        // Tạo toast element - tạo để hiển thị thông báo với màu sắc và kiểu dáng dựa trên loại thông báo (warning, success, error)
+        const toast = document.createElement('div');
+        const bgColor = type === 'warning' ? '#ffc107' : (type === 'success' ? '#28a745' : '#dc3545');
+        const textColor = type === 'warning' ? '#000' : '#fff';
+        
+        toast.style.cssText = `
+            background-color: ${bgColor};
+            color: ${textColor};
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            animation: slideIn 0.3s ease-in-out;
+            max-width: 350px;
+            font-weight: 500;
+        `;
+        
+        toast.textContent = message;
+        toastContainer.appendChild(toast);
+
+        // Xóa toast sau 3 giây
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-in-out';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // Quick buy function - redirect to product details or checkout
+    function quickBuy(productId, productName) {
+        const quantity = 1;
+
+        if (!isAuthenticated) {
+            localStorage.setItem('pendingQuickBuyProduct', productId);
+            localStorage.setItem('pendingQuickBuyQuantity', quantity);
+            showLoginRequiredModal('Vui lòng đăng nhập để mua sản phẩm.');
+            return;
+        }
+
+        fetch('/Cart/AddToCart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productId: productId, quantity: quantity })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                sessionStorage.setItem('selectedProducts', JSON.stringify([productId]));
+                // Chuyển đến trang Checkout với ID sản phẩm vừa thêm
+                window.location.href = '/Cart/Checkout?selectedItems=' + productId;
+            } else {
+                alert(data.message || 'Có lỗi xảy ra');
+            }
+        });
+    }
+</script>
+
+<style>
+    .bg-pastel-green { background-color: #f0f9eb; }
+    .hover-up { transition: all 0.3s ease; cursor: pointer; }
+    .hover-up:hover { transform: translateY(-10px); }
+    .product-card {
+        transition: all 0.28s ease;
+        border-radius: 15px;
+        display: flex;
+        flex-direction: column;
+    }
+    .product-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px rgba(0,0,0,0.1) !important; }
+    .product-image-wrap {
+        background: linear-gradient(180deg, #f9fff5 0%, #ffffff 100%);
+        height: 280px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .product-image {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 12px !important;
+    }
+    .product-body {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+    .product-origin { min-height: 20px; }
+    .product-rating {
+        min-height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        flex-wrap: nowrap !important;
+    }
+    .rating-stars {
+        display: inline-flex;
+        align-items: center;
+        gap: 1px;
+        line-height: 1;
+    }
+    .star {
+        font-size: 1.15rem;
+    }
+    .star-full {
+        color: #f2b01e;
+    }
+    .star-half {
+        color: #f2b01e;
+        opacity: 0.6;
+    }
+    .star-empty {
+        color: #d6d6d6;
+    }
+    .rating-text {
+        font-size: 0.85rem;
+        color: #6c757d;
+        font-weight: 700;
+        margin-left: 4px;
+    }
+    .product-title {
+        min-height: 48px;
+        line-height: 1.25;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+        font-size: 1rem;
+        margin-top: 8px;
+    }
+    .product-price {
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+    }
+    .product-body .btn {
+        margin-top: auto;
+        align-self: center;
+        min-width: 0px;
+        padding: 10px 30px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 10px rgba(47, 169, 91, 0.15);
+    }
+    .product-body .btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 15px rgba(47, 169, 91, 0.3);
+    }
+    .product-discount-badge {
+        position: absolute;
+        top: 0;
+        left: 0;
+        background: linear-gradient(135deg, #55c06f, #2fa95b);
+        color: #fff;
+        font-size: 0.8rem;
+        font-weight: 700;
+        line-height: 1;
+        padding: 11px 18px;
+        border-radius: 0 0 18px 0;
+        box-shadow: 0 6px 14px rgba(47, 169, 91, 0.25);
+        z-index: 2;
+    }
+    .hover-green:hover { color: #6AAE2D !important; }
+    
+    /* Đảm bảo carousel-caption không bị ghi đè bởi CSS mặc định của Bootstrap */
+    .carousel-caption {
+        bottom: auto !important;
+    }
+</style>

@@ -1,0 +1,333 @@
+@model IEnumerable<Web_hoaqua.Models.Product>
+@{
+    ViewData["Title"] = "Khuyến mãi Hot";
+    var coupons = ViewBag.Coupons as List<Web_hoaqua.Models.Coupon>;
+}
+
+<style>
+    /* Voucher Hub Styles */
+    .voucher-card {
+        background: #fff;
+        border: 2px dashed #6AAE2D;
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.3s ease;
+        display: flex;
+        height: 100px; /* Slight reduction for compactness */
+    }
+    .voucher-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(106, 174, 45, 0.15);
+    }
+    .voucher-left {
+        background: #6AAE2D;
+        color: #fff;
+        width: 100px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+        text-align: center;
+        padding: 5px;
+    }
+    .voucher-right {
+        flex: 1;
+        padding: 10px 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 5px;
+    }
+    .voucher-code-line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1rem;
+    }
+    .voucher-code {
+        font-family: 'Monaco', 'Consolas', monospace;
+        color: #d63384;
+        font-weight: bold;
+        font-size: 1.1rem;
+        background: #fff0f5;
+        padding: 2px 8px;
+        /* margin-left can be adjusted by setting the CSS variable --voucher-code-ml
+           e.g. style="--voucher-code-ml:20px" on the .voucher-code-line element */
+        margin-left: var(--voucher-code-ml, 0);
+        border-radius: 4px;
+        border: 1px solid #ffd6e0;
+    }
+
+    /* Decorative element */
+    .promo-decorator {
+        position: absolute;
+        top: -50px;
+        right: -50px;
+        width: 200px;
+        height: 200px;
+        background: rgba(106, 174, 45, 0.05);
+        border-radius: 50%;
+        z-index: -1;
+    }
+</style>
+
+<!-- Banner Khuyến mãi -->
+<div class="py-5 text-center bg-pastel-green mb-5">
+    <div class="container">
+        <h1 class="display-4 fw-bold text-success mb-3">SIÊU ƯU ĐÃI TRÁI CÂY</h1>
+        <p class="lead text-muted">Săn Deal cực hời - Voucher tới nơi</p>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <!-- Voucher Hub Section -->
+    <h3 class="mb-4 fw-bold text-dark border-start border-success border-4 ps-3">Mã Giảm Giá Đang Có</h3>
+    <div class="row g-4 mb-5">
+        @if (coupons != null && coupons.Any())
+        {
+            foreach (var coupon in coupons)
+            {
+                <div class="col-md-4 fade-in-scroll">
+                    <div class="voucher-card">
+                        <div class="voucher-left">
+                            <i class="fas fa-ticket-alt fs-3 mb-2"></i>
+                            <div style="font-size: 0.75rem;">OFF</div>
+                            <div>@(coupon.DiscountType == "percent" ? coupon.DiscountValue + "%" : string.Format("{0:N0}đ", coupon.DiscountValue))</div>
+                        </div>
+                        <div class="voucher-right">
+                            <div class="d-flex align-items-center voucher-code-line mb-2" style="--voucher-code-ml:15px;">
+                                <span class="small text-muted me-2">Nhập mã:</span>
+                                <div class="flex-grow-1 d-flex justify-content-start">
+                                    <span class="voucher-code">@coupon.Code</span>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-center mb-2">
+                                <button class="btn btn-sm btn-outline-success rounded-pill" style="width: 200px;" onclick="copyToClipboard('@coupon.Code')">
+                                    <i class="fas fa-copy me-1"></i> Sao chép mã
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-muted italic">Hiện tại chưa có mã giảm giá mới.</p>
+        }
+    </div>
+
+    <!-- Product Grid Section -->
+    <h3 class="mb-4 fw-bold text-dark border-start border-success border-4 ps-3">Sản Phẩm Đang Giảm Giá</h3>
+    <div class="row g-4">
+        @foreach (var item in Model)
+        {
+            var approvedReviews = item.Reviews?.Where(r => r.Status == 1 && r.Rating.HasValue).ToList() ?? new List<Web_hoaqua.Models.Review>();
+            var reviewCount = approvedReviews.Count;
+            var averageRating = reviewCount > 0 ? approvedReviews.Average(r => r.Rating!.Value) : 0;
+            var fullStars = (int)Math.Floor(averageRating);
+            var hasHalfStar = averageRating - fullStars >= 0.5;
+
+            <div class="col-6 col-lg-3 fade-in-scroll">
+                <div class="card h-100 border-0 shadow-sm product-card">
+                    <div class="position-relative overflow-hidden product-image-wrap">
+                        <a asp-controller="Products" asp-action="Details" asp-route-id="@item.Id" class="d-block h-100">
+                            <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted" style="aspect-ratio: 1/1;">
+                                <i class="fas fa-image"></i>
+                            </div>
+                        </a>
+                        @if (item.DiscountPercent > 0)
+                        {
+                            <span class="product-discount-badge">
+                                -@Math.Round(item.DiscountPercent.Value)%
+                            </span>
+                        }
+                    </div>
+                    <div class="card-body text-center pt-0 product-body">
+                        <p class="text-muted small mb-1 product-origin">@item.Origin</p>
+                        <a asp-controller="Products" asp-action="Details" asp-route-id="@item.Id" class="text-decoration-none text-dark">
+                            <h6 class="card-title fw-bold mb-2 product-title">@item.Name</h6>
+                        </a>
+                        <div class="product-rating mb-2">
+                            @if (reviewCount > 0)
+                            {
+                                <div class="rating-stars">
+                                    @for (int s = 1; s <= 5; s++)
+                                    {
+                                        if (s <= fullStars) { <span class="star star-full">&#9733;</span> }
+                                        else if (s == fullStars + 1 && hasHalfStar) { <span class="star star-half">&#9733;</span> }
+                                        else { <span class="star star-empty">&#9734;</span> }
+                                    }
+                                </div>
+                                <span class="rating-text">@averageRating.ToString("0.0")</span>
+                            }
+                            else
+                            {
+                                <span class="rating-text text-muted">Chưa có đánh giá</span>
+                            }
+                        </div>
+                        <div class="mb-3 product-price">
+                            <span class="text-success fw-bold fs-5">@string.Format("{0:N0}đ", item.FinalPrice)</span>
+                            <span class="text-muted text-decoration-line-through small ms-2">@string.Format("{0:N0}đ", item.Price)</span>
+                        </div>
+                        <button class="btn-buy-now" type="button" onclick="quickBuy(@item.Id, '@item.Name')">
+                            <i class="fas fa-bolt"></i>Mua ngay
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Pagination Section -->
+    @if (ViewBag.TotalPages > 1)
+    {
+        var currentPage = (int)ViewBag.CurrentPage;
+        var totalPages = (int)ViewBag.TotalPages;
+        const int pageWindowSize = 5;
+        var startPage = Math.Max(1, currentPage - 2);
+        var endPage = Math.Min(totalPages, currentPage + 2);
+
+        if (endPage - startPage + 1 < pageWindowSize)
+        {
+            if (startPage == 1) endPage = Math.Min(totalPages, startPage + pageWindowSize - 1);
+            else if (endPage == totalPages) startPage = Math.Max(1, endPage - pageWindowSize + 1);
+        }
+        <nav class="mt-5" aria-label="Phân trang sản phẩm">
+            <div class="pagination-shell">
+                <ul class="pagination pagination-modern mb-0 justify-content-center align-items-center flex-wrap gap-1">
+                @if (currentPage > 1)
+                {
+                    <li class="page-item">
+                        <a class="page-link nav-btn" href="javascript:void(0)" onclick="changePage(1)" aria-label="Về trang đầu">&lt;&lt;</a>
+                    </li>
+                }
+
+                @for (int p = startPage; p <= endPage; p++)
+                {
+                    <li class="page-item @(p == currentPage ? "active" : "")">
+                        <a class="page-link" href="javascript:void(0)" onclick="changePage(@p)">@p</a>
+                    </li>
+                }
+
+                @if (currentPage < totalPages)
+                {
+                    <li class="page-item">
+                        <a class="page-link nav-btn" href="javascript:void(0)" onclick="changePage(@(currentPage + 1))" aria-label="Trang sau">&gt;&gt;</a>
+                    </li>
+                }
+                </ul>
+            </div>
+        </nav>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function changePage(page) {
+            window.location.href = '/Products/Promotions?page=' + page;
+        }
+
+        // Quick buy function from Home page
+        function quickBuy(productId, productName) {
+            const quantity = 1;
+
+            if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
+                localStorage.setItem('pendingQuickBuyProduct', productId);
+                localStorage.setItem('pendingQuickBuyQuantity', quantity);
+                if (typeof showLoginRequiredModal === 'function') {
+                    showLoginRequiredModal('Vui lòng đăng nhập để mua sản phẩm.');
+                } else {
+                    window.location.href = '/Home/Login';
+                }
+                return;
+            }
+
+            fetch('/Cart/AddToCart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId: productId, quantity: quantity })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    sessionStorage.setItem('selectedProducts', JSON.stringify([productId]));
+                    // Chuyển đến trang Checkout với ID sản phẩm vừa thêm
+                    window.location.href = '/Cart/Checkout?selectedItems=' + productId;
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi',
+                        text: data.message || 'Có lỗi xảy ra'
+                    });
+                }
+            });
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Đã sao chép!',
+                    text: 'Bạn có thể sử dụng mã ' + text + ' khi thanh toán.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            });
+        }
+
+        // Animation on scroll
+        const observerOptions = {
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in-scroll').forEach(el => observer.observe(el));
+
+        function addToCart(productId, productName) {
+            // Kiểm tra biến isAuthenticated được định nghĩa trong _Layout
+            if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
+                if (typeof showLoginRequiredModal === 'function') {
+                    showLoginRequiredModal('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.');
+                } else {
+                    window.location.href = '/Home/Login';
+                }
+                return;
+            }
+            
+            fetch('/Cart/AddToCart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId: productId, quantity: 1 })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Đã thêm!',
+                        text: productName + ' đã vào giỏ hàng.',
+                        timer: 2000,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false
+                    });
+                    if (typeof updateCartCount === 'function') {
+                        updateCartCount();
+                    }
+                } else if (data.requireLogin) {
+                    window.location.href = '/Home/Login';
+                }
+            });
+        }
+    </script>
+}
