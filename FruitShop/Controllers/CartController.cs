@@ -29,7 +29,9 @@ namespace FruitShop.Controllers
                var cartItems = new List<CartItem>();
                foreach (var item in cart)
                {
-                    var product = _context.Products.FirstOrDefault(p => p.Id == item.Key);
+                    var product = _context.Products
+                        .Include(p => p.ProductImages)
+                        .FirstOrDefault(p => p.Id == item.Key);
                     if (product != null)
                     {
                          cartItems.Add(new CartItem

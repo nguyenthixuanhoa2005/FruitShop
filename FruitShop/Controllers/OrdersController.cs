@@ -47,6 +47,7 @@ namespace FruitShop.Controllers
             var order = await _context.Orders
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
+                    .ThenInclude(p => p.ProductImages)
                 .Include(o => o.Coupon)
                 .FirstOrDefaultAsync(o => o.Id == id && o.UserId == userId);
 
