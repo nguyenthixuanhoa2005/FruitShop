@@ -13,7 +13,7 @@ from urllib import request as urlrequest
 from urllib.error import URLError, HTTPError
 from datetime import datetime
 import pyodbc
-from config_private import SQL_CONN_STR, GEMINI_API_KEY
+from config_private import SQL_CONN_STR, GEMINI_API_KEY, DIFY_API_KEY
 
 app = FastAPI()
 app.add_middleware(
@@ -25,6 +25,7 @@ app.add_middleware(
 )
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+DIFY_API_URL = "https://api.dify.ai/v1"
 BASE_DIR = os.path.dirname(__file__)
 PRODUCTS_CACHE = []
 PRODUCTS_BY_ID = {}
@@ -664,6 +665,13 @@ def is_on_sale_product(product: dict) -> bool:
 
 
 def to_product_response(product: dict):
+    image_url = product.get("image_url")
+    if image_url:
+        if not (image_url.startswith("http") or image_url.startswith("/") or image_url.startswith("data:")):
+            image_url = f"/Upload/Products/{image_url}"
+    else:
+        image_url = svg_placeholder(product["name"])
+
     return {
         "id": product["id"],
         "name": product["name"],
@@ -680,8 +688,8 @@ def to_product_response(product: dict):
         "unit": product["unit"],
         "product_type": product.get("product_type"),
         "related_product_ids": product.get("related_product_ids") or [],
-        "image_url": product["image_url"] or svg_placeholder(product["name"]),
-        "buy_url": product["buy_url"],
+        "image_url": image_url,
+        "buy_url": f"/Products/Details/{product['id']}",
     }
 
 
@@ -2427,6 +2435,112 @@ def search_products(user_query: str, limit: int = 3, forced_type: str = None, mu
     return results
 
 
+def is_online():
+    """Check if the system is online by trying to reach Dify API or a reliable host."""
+    try:
+        urlrequest.urlopen("https://api.dify.ai", timeout=2)
+        return True
+    except Exception:
+        try:
+            urlrequest.urlopen("https://www.google.com", timeout=2)
+            return True
+        except Exception:
+            return False
+
+
+def call_dify(query: str, session_id: str, conversation_id: str = None):
+    if not DIFY_API_KEY:
+        return None, None, []
+    
+    endpoints = [
+        (f"{DIFY_API_URL}/chat-messages", {
+            "inputs": {"user_name": session_id},
+            "query": query,
+            "response_mode": "blocking",
+            "conversation_id": conversation_id or "",
+            "user": session_id,
+        }),
+        (f"{DIFY_API_URL}/workflows/run", {
+            "inputs": {"query": query, "user_name": session_id},
+            "response_mode": "blocking",
+            "user": session_id,
+        })
+    ]
+    
+    headers = {
+        "Authorization": f"Bearer {DIFY_API_KEY.strip()}",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    
+    for endpoint, payload in endpoints:
+        try:
+            req = urlrequest.Request(
+                endpoint,
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST"
+            )
+            with urlrequest.urlopen(req, timeout=30) as resp:
+                body = json.loads(resp.read().decode("utf-8"))
+                
+                if "answer" in body:
+                    answer = body.get("answer", "")
+                    new_conv_id = body.get("conversation_id")
+                elif "data" in body and "outputs" in body["data"]:
+                    answer = body["data"]["outputs"].get("text") or body["data"]["outputs"].get("answer") or ""
+                    new_conv_id = None
+                else:
+                    continue
+                
+                products = []
+                metadata = body.get("metadata", {})
+                tool_outputs = metadata.get("tool_outputs", [])
+                for tool in tool_outputs:
+                    tool_output_data = tool.get("output", {}) if isinstance(tool, dict) else {}
+                    if isinstance(tool_output_data, dict) and "products" in tool_output_data:
+                        products.extend(tool_output_data["products"])
+                
+                if not products and "data" in body:
+                    outputs = body["data"].get("outputs", {})
+                    if "products" in outputs:
+                        products = outputs["products"]
+
+                if not products and answer:
+                    found_products = []
+                    bold_names = re.findall(r"\*\*(.*?)\*\*", answer)
+                    answer_clean = strip_accents(answer)
+                    
+                    for bn in bold_names:
+                        bn_clean = strip_accents(bn).strip()
+                        if len(bn_clean) < 2: continue
+                        for p in PRODUCTS_CACHE:
+                            p_name_clean = strip_accents(p["name"]).strip()
+                            if bn_clean in p_name_clean or p_name_clean in bn_clean:
+                                if not any(item["id"] == p["id"] for item in found_products):
+                                    found_products.append(to_product_response(p))
+                    
+                    if len(found_products) < 3:
+                        for p in PRODUCTS_CACHE:
+                            p_name_clean = strip_accents(p["name"]).strip()
+                            if len(p_name_clean) > 5 and p_name_clean in answer_clean:
+                                if not any(item["id"] == p["id"] for item in found_products):
+                                    found_products.append(to_product_response(p))
+                    
+                    if found_products:
+                        products = found_products[:4]
+
+                if not products:
+                    products = search_products(query, limit=3)
+                    
+                return answer, new_conv_id, products
+                
+        except Exception:
+            continue
+            
+    return None, None, []
+
+
 @app.post("/chat")
 async def chat_with_ai(request: Request):
     data = await request.json()
@@ -2435,6 +2549,7 @@ async def chat_with_ai(request: Request):
     session_state = CONVERSATION_STATE.setdefault(
         session_id,
         {
+            "dify_conversation_id": None,
             "preference_tokens": [],
             "preferred_type": None,
             "last_entities": [],
@@ -2455,6 +2570,40 @@ async def chat_with_ai(request: Request):
     if not user_query_raw:
         return {"answer": "Vui lòng nhập câu hỏi.", "products": []}
 
+    # THỰC HIỆN KẾT NỐI DIFY AI NẾU CÓ MẠNG
+    if is_online():
+        dify_conv_id = session_state.get("dify_conversation_id")
+        answer, new_conv_id, products = call_dify(user_query_raw, session_id, dify_conv_id)
+        if answer:
+            if new_conv_id:
+                session_state["dify_conversation_id"] = new_conv_id
+            
+            # Đồng bộ kết quả để UI hiển thị các sản phẩm liên quan
+            if products:
+                # Chuyển đổi sang định dạng response nếu là sản phẩm thô từ cache
+                processed_products = [
+                    to_product_response(p) if "search_blob" in p else p 
+                    for p in products
+                ]
+                session_state["last_results"] = processed_products[:3]
+                
+                # Cập nhật intent và type để các câu hỏi sau (nếu offline) vẫn có ngữ cảnh
+                session_state["last_intent"] = "shopping"
+                if processed_products:
+                    session_state["preferred_type"] = processed_products[0].get("product_type")
+
+            response_id = str(uuid.uuid4())
+            append_chat_turn(session_state, "user", user_query_raw)
+            return finalize_chat_response(session_state, {
+                "answer": answer,
+                "products": [to_product_response(p) if "search_blob" in p else p for p in products],
+                "source_products": [item["name"] for item in products],
+                "confidence": 0.95 if products else 0.8,
+                "response_id": response_id,
+                "answer_mode": "advice",
+            })
+
+    # FALLBACK: SỬ DỤNG LOGIC CHATBOT LOCAL NẾU MẤT MẠNG HOẶC DIFY LỖI
     user_query = normalize_user_query(user_query_raw)
     if not user_query:
         return {"answer": "Mình chưa đọc rõ ý của bạn, bạn nhắn lại ngắn gọn giúp mình nhé.", "products": []}

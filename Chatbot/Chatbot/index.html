@@ -135,6 +135,7 @@
             word-wrap: break-word;
             box-shadow: 0 8px 18px rgba(2, 10, 24, 0.2);
             font-size: 14px;
+            flex-shrink: 0;
         }
 
         .message.user {
@@ -214,14 +215,35 @@
             display: flex;
             flex-wrap: nowrap;
             overflow-x: auto;
-            overflow-y: hidden;
-            scroll-snap-type: x proximity;
+            overflow-y: visible;
+            scroll-snap-type: x mandatory;
             -webkit-overflow-scrolling: touch;
-            gap: 10px;
-            margin-top: 10px;
-            padding-bottom: 6px;
+            gap: 16px;
+            margin-top: 16px;
+            padding: 10px 4px 20px;
             scrollbar-width: thin;
-            scrollbar-color: rgba(140, 169, 215, 0.5) transparent;
+            scrollbar-color: rgba(34, 197, 94, 0.4) transparent;
+            min-height: 400px;
+        }
+
+        .recommendation-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            font-weight: 700;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .recommendation-header svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
         }
 
         .card-list.compare-list {
@@ -229,29 +251,73 @@
             grid-template-columns: repeat(2, minmax(0, 1fr));
             overflow-x: visible;
             overflow-y: visible;
-            gap: 14px;
+            gap: 12px;
             padding-bottom: 0;
         }
 
         .card-list::-webkit-scrollbar {
-            height: 7px;
+            height: 6px;
         }
 
         .card-list::-webkit-scrollbar-thumb {
-            background: rgba(125, 153, 195, 0.55);
+            background: rgba(34, 197, 94, 0.3);
             border-radius: 999px;
         }
 
+        .citation-card {
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+
+        .citation-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #22c55e;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .citation-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .citation-item {
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        .citation-item small {
+            display: block;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.3);
+            margin-top: 2px;
+        }
+
         .product-card {
-            flex: 0 0 232px;
-            background: rgba(10, 24, 47, 0.93);
-            border: 1px solid var(--border);
-            border-radius: 16px;
+            flex: 0 0 260px;
+            width: 260px;
+            min-height: 420px;
+            background: rgba(13, 31, 61, 0.95);
+            border: 1px solid rgba(34, 197, 94, 0.25);
+            border-radius: 20px;
             overflow: hidden;
             scroll-snap-align: start;
             display: flex;
             flex-direction: column;
-            transition: transform 0.2s ease, border-color 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .text-only-card {
+            border-left: 4px solid #22c55e;
         }
 
         .card-list.compare-list .product-card {
@@ -261,14 +327,36 @@
         }
 
         .product-card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(34, 197, 94, 0.48);
+            transform: translateY(-6px);
+            border-color: #22c55e;
+            box-shadow: 0 12px 30px rgba(34, 197, 94, 0.25);
+        }
+
+        .product-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), transparent, rgba(245, 158, 11, 0.4));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            opacity: 0.5;
+            transition: opacity 0.3s ease;
+        }
+
+        .product-card:hover::before {
+            opacity: 1;
         }
 
         .product-image {
             position: relative;
-            aspect-ratio: 4 / 3;
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(249, 115, 22, 0.18));
+            aspect-ratio: 16 / 10;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(249, 115, 22, 0.1));
+            overflow: hidden;
         }
 
         .product-image img {
@@ -276,19 +364,43 @@
             height: 100%;
             object-fit: cover;
             display: block;
+            transition: transform 0.5s ease;
+        }
+
+        .product-card:hover .product-image img {
+            transform: scale(1.08);
+        }
+
+        .ai-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 4px 10px;
+            background: rgba(34, 197, 94, 0.9);
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            border-radius: 6px;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            z-index: 2;
         }
 
         .badge {
             position: absolute;
-            left: 12px;
-            top: 12px;
-            padding: 6px 9px;
-            border-radius: 999px;
-            background: rgba(17, 24, 39, 0.84);
-            border: 1px solid var(--border);
+            left: 10px;
+            top: 10px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             color: #d1fae5;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
+            z-index: 2;
         }
 
         .product-body {
@@ -299,10 +411,18 @@
         }
 
         .product-body h3 {
-            margin: 0 0 8px;
-            font-size: 16px;
-            letter-spacing: -0.01em;
-            line-height: 1.35;
+            margin: 0 0 10px;
+            font-size: 18px;
+            font-weight: 800;
+            color: #22c55e;
+            letter-spacing: -0.02em;
+            line-height: 1.3;
+            min-height: 46px; /* Space for 2 lines of title */
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
         .product-body p {
@@ -318,13 +438,60 @@
             overflow: hidden;
         }
 
-        .product-footer {
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            justify-content: flex-start;
-            gap: 8px;
+        .price-section {
             margin-top: auto;
+            padding-top: 12px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.1);
+            margin-bottom: 14px;
+        }
+
+        .price-label {
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .product-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .product-actions .btn {
+            padding: 10px 8px;
+            font-size: 12px;
+            gap: 6px;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+
+        .btn-detail {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+        }
+
+        .btn-detail:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-buy {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-buy:hover {
+            filter: brightness(1.1);
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+        }
+
+        .product-footer {
+            display: none; /* Hide old footer styles */
         }
 
         .price {
@@ -502,16 +669,38 @@
             line-height: 1.5;
         }
 
+        .recommendation-message {
+            max-width: 100% !important;
+            width: 100%;
+            padding: 12px 10px !important;
+            background: rgba(17, 34, 63, 0.45) !important;
+            border-color: rgba(34, 197, 94, 0.2) !important;
+        }
+
         @media (max-width: 640px) {
-            body { padding: 12px; }
-            .header, .chat-panel { border-radius: 16px; padding: 12px; }
-            .input-row { flex-direction: column; }
-            .btn { width: 100%; }
-            .message { max-width: 96%; }
-            .product-card { flex-basis: 212px; }
+            body { padding: 10px 12px; }
+            .header, .chat-panel { border-radius: 16px; padding: 10px; }
+            .input-row { flex-direction: row; gap: 8px; }
+            #user-input { padding: 10px 12px; }
+            .btn { padding: 8px 12px; }
+            .message { max-width: 95%; font-size: 13px; }
+            .product-card { flex: 0 0 200px; border-radius: 16px; }
+            .product-image { aspect-ratio: 1 / 1; }
+            .product-body h3 { font-size: 14px; margin-bottom: 4px; }
+            .product-body p { font-size: 12px; min-height: 36px; -webkit-line-clamp: 2; margin-bottom: 10px; }
+            .price-section { padding-top: 8px; margin-bottom: 10px; }
+            .price { font-size: 16px; }
+            .card-list { gap: 12px; padding-bottom: 8px; }
+            .ai-badge { padding: 3px 8px; font-size: 9px; }
             .card-list.compare-list { grid-template-columns: 1fr; }
-            h1 { font-size: 19px; }
-            .subtitle { font-size: 13px; }
+            h1 { font-size: 18px; }
+        }
+
+        @media (max-width: 400px) {
+            .product-card { flex: 0 0 180px; }
+            .product-actions { grid-template-columns: 1fr; gap: 6px; }
+            .product-actions .btn { padding: 8px; font-size: 11px; }
+            .recommendation-header { font-size: 11px; }
         }
     </style>
 </head>
@@ -557,15 +746,9 @@
         async function initializeSession() {
             const previousSessionId = localStorage.getItem(sessionKey);
             if (previousSessionId) {
-                try {
-                    await fetch('/chat/reset', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ session_id: previousSessionId })
-                    });
-                } catch {
-                    // If backend reset fails, still start a fresh client session.
-                }
+                // Keep the existing session to preserve history
+                sessionId = previousSessionId;
+                return sessionId;
             }
 
             sessionId = createFreshSessionId();
@@ -610,7 +793,7 @@
             const svg = `
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
                     <defs>
-                        <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+                        <linearGradient id="g" x1="0" x2="1" y1="0" x2="1">
                             <stop offset="0%" stop-color="#22c55e"/>
                             <stop offset="100%" stop-color="#f97316"/>
                         </linearGradient>
@@ -631,20 +814,31 @@
             }
 
             const listClass = answerMode === 'compare' ? 'card-list compare-list' : 'card-list';
+            const headerHtml = `
+                <div class="recommendation-header">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                    Sản phẩm gợi ý cho bạn
+                </div>
+            `;
 
             return `
+                ${headerHtml}
                 <div class="${listClass}">
                     ${products.map((product) => {
+                        const detailUrl = product.detail_url || (product.buy_url ? product.buy_url.replace('/Cart/AddToCart/', '/Products/Details/') : '#');
                         const imageSrc = product.image_url ? product.image_url : svgPlaceholder(product.name);
+                        
                         return `
                             <article class="product-card">
+                                <div class="ai-badge">✨ AI Gợi ý</div>
                                 <div class="product-image">
                                     <img src="${escapeHtml(imageSrc)}" alt="${escapeHtml(product.name)}">
                                 </div>
                                 <div class="product-body">
                                     <h3>${escapeHtml(product.name)}</h3>
                                     <p>${escapeHtml(product.description || 'Chưa có mô tả chi tiết cho sản phẩm này.')}</p>
-                                    <div class="product-footer">
+                                    
+                                    <div class="price-section">
                                         <div class="price-wrap">
                                             ${Number(product.original_price || 0) > Number(product.final_price || 0)
                                                 ? `<div class="old-price">${formatOldProductPrice(product)}</div>`
@@ -656,7 +850,11 @@
                                                     : ''}
                                             </div>
                                         </div>
-                                        <a class="btn product-buy-btn" href="${escapeHtml(product.buy_url || '#')}">Mua ngay</a>
+                                    </div>
+
+                                    <div class="product-actions">
+                                        <a class="btn btn-detail" href="${escapeHtml(detailUrl)}" target="_blank">Chi tiết</a>
+                                        <a class="btn btn-buy" href="${escapeHtml(product.buy_url || '#')}" target="_blank">Mua ngay</a>
                                     </div>
                                 </div>
                             </article>
@@ -740,13 +938,43 @@
             }
         }
 
+        function renderCitations(citations) {
+            if (!Array.isArray(citations) || !citations.length) {
+                return '';
+            }
+
+            return `
+                <div class="citation-card">
+                    <div class="citation-title">Nguồn tham khảo</div>
+                    <div class="citation-list">
+                        ${citations.map((citation) => {
+                            const label = escapeHtml(citation.label || 'Nguồn');
+                            const sourcePath = escapeHtml(citation.source_path || '');
+                            const chunkIndex = Number(citation.chunk_index || 0);
+                            const score = Number(citation.score || 0).toFixed(3);
+                            return `
+                                <div class="citation-item">
+                                    ${label}
+                                    <small>${sourcePath ? `${sourcePath} • ` : ''}chunk ${chunkIndex || 1} • relevance ${score}</small>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
         function appendBotMessage(answer, products, extra = {}) {
             const hasProducts = Array.isArray(products) && products.length > 0;
             const shouldRenderCards = hasProducts && extra.display_products !== false;
             const cards = shouldRenderCards ? renderProductCards(products, extra.answer_mode || '') : '';
+            const citations = renderCitations(extra.citations || []);
             const answerHtml = formatBotAnswer(answer);
             const responseId = extra.response_id ? escapeHtml(extra.response_id) : '';
-            const messageClass = extra.answer_mode === 'compare' ? 'message ai compare-answer' : 'message ai';
+            
+            let messageClass = 'message ai';
+            if (extra.answer_mode === 'compare') messageClass += ' compare-answer';
+            if (hasProducts) messageClass += ' recommendation-message';
 
             chatBox.insertAdjacentHTML('beforeend', `
                 <div class="${messageClass}">
@@ -759,6 +987,7 @@
                             </div>
                         ` : ''}
                     </div>
+                    ${citations}
                     ${cards}
                 </div>
             `);
@@ -828,7 +1057,7 @@
 
         sendBtn.addEventListener('click', sendMessage);
         input.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') sendMessage();
+            event.key === 'Enter' && sendMessage();
         });
     </script>
 </body>
