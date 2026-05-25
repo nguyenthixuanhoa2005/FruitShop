@@ -154,16 +154,16 @@
 
 /* Product Cards in Chat */
 .chatbot-card-list {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 176px;
-    align-items: stretch;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    gap: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    align-self: stretch;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    overflow: visible;
     margin-top: 10px;
-    padding: 10px 10px 12px;
+    padding: 10px;
     background: rgba(8, 26, 52, 0.68);
     border: 1px solid rgba(125, 153, 195, 0.18);
     border-radius: 18px;
@@ -173,7 +173,7 @@
 }
 
 .chatbot-card-list::-webkit-scrollbar {
-    height: 4px;
+    display: none;
 }
 
 .chatbot-card-list::-webkit-scrollbar-thumb {
@@ -183,11 +183,11 @@
 
 .chatbot-product-card {
     width: 100%;
+    min-height: 138px;
     background: rgba(13, 31, 61, 0.95);
     border: 1px solid rgba(34, 197, 94, 0.25);
     border-radius: 16px;
     overflow: hidden;
-    scroll-snap-align: start;
     display: flex;
     flex-direction: column;
     position: relative;
@@ -221,6 +221,7 @@
     display: flex;
     flex-direction: column;
     flex: 1;
+    min-width: 0;
 }
 
 .chatbot-product-name {
@@ -228,6 +229,7 @@
     font-weight: 800;
     margin-bottom: 8px;
     color: #22c55e;
+    line-clamp: 2;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -289,7 +291,7 @@
         right: -10px;
     }
     .chatbot-card-list {
-        grid-auto-columns: 152px;
+        width: 100%;
     }
     .chatbot-product-card {
         width: 100%;

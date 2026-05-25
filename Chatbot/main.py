@@ -2464,21 +2464,33 @@ def search_products(user_query: str, limit: int = 3, forced_type: str = None, mu
 
 
 def is_online():
-    """Check if the system is online by trying to reach Dify API or a reliable host."""
-    try:
-        urlrequest.urlopen("https://api.dify.ai", timeout=2)
-        return True
-    except Exception:
+    """Check if the system is online by trying to reach reliable hosts."""
+    import ssl
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    
+    # Priority check: Google or Cloudflare DNS usually fastest
+    hosts = ["https://www.google.com", "https://1.1.1.1", "https://api.dify.ai"]
+    for host in hosts:
         try:
-            urlrequest.urlopen("https://www.google.com", timeout=2)
+            urlrequest.urlopen(host, timeout=2, context=ctx)
+            print(f"Network check: ONLINE (reached {host})")
             return True
         except Exception:
-            return False
+            continue
+    print("Network check: OFFLINE (all hosts unreachable)")
+    return False
 
 
 def call_dify(query: str, session_id: str, conversation_id: str = None):
-    if not DIFY_API_KEY:
+    print(f"DEBUG: Entering call_dify with session_id={session_id}", flush=True)
+    if not DIFY_API_KEY or not str(DIFY_API_KEY).strip():
+        print("Dify Error: DIFY_API_KEY is empty or not set in config_private.py", flush=True)
         return None, None, []
+    
+    api_key = str(DIFY_API_KEY).strip()
+    print(f"DEBUG: DIFY_API_KEY starts with: {api_key[:6]}...", flush=True)
     
     endpoints = [
         (f"{DIFY_API_URL}/chat-messages", {
@@ -2496,21 +2508,30 @@ def call_dify(query: str, session_id: str, conversation_id: str = None):
     ]
     
     headers = {
-        "Authorization": f"Bearer {DIFY_API_KEY.strip()}",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     
+    import ssl
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
     for endpoint, payload in endpoints:
         try:
+            print(f"DEBUG: Calling Dify endpoint: {endpoint}", flush=True)
             req = urlrequest.Request(
                 endpoint,
                 data=json.dumps(payload).encode("utf-8"),
                 headers=headers,
                 method="POST"
             )
-            with urlrequest.urlopen(req, timeout=30) as resp:
+            with urlrequest.urlopen(req, timeout=35, context=ctx) as resp:
+                status = resp.getcode()
+                print(f"DEBUG: Dify HTTP Status: {status}", flush=True)
                 body = json.loads(resp.read().decode("utf-8"))
+                print(f"DEBUG: Dify Response: Success from {endpoint}", flush=True)
                 
                 if "answer" in body:
                     answer = body.get("answer", "")
@@ -2519,6 +2540,7 @@ def call_dify(query: str, session_id: str, conversation_id: str = None):
                     answer = body["data"]["outputs"].get("text") or body["data"]["outputs"].get("answer") or ""
                     new_conv_id = None
                 else:
+                    print(f"Dify Warning: Unexpected response format from {endpoint}: {list(body.keys())}", flush=True)
                     continue
                 
                 products = []
@@ -2563,7 +2585,8 @@ def call_dify(query: str, session_id: str, conversation_id: str = None):
                     
                 return answer, new_conv_id, products
                 
-        except Exception:
+        except Exception as e:
+            print(f"Dify Error at {endpoint}: {type(e).__name__} - {str(e)}")
             continue
             
     return None, None, []
@@ -2603,38 +2626,37 @@ async def chat_with_ai(request: Request):
     if not user_query_raw:
         return {"answer": "Vui lòng nhập câu hỏi.", "products": []}
 
-    # THỰC HIỆN KẾT NỐI DIFY AI NẾU CÓ MẠNG
+    # THỰC HIỆN KẾT NỐI DIFY AI NẾU CÓ MẠNG (ƯU TIÊN 100%)
     if is_online():
+        print(f"DEBUG: System is ONLINE. Enforcing Dify AI for session {session_id}", flush=True)
         dify_conv_id = session_state.get("dify_conversation_id")
         answer, new_conv_id, products = call_dify(user_query_raw, session_id, dify_conv_id)
+        
         if answer:
+            print(f"DEBUG: Dify AI responded successfully. Returning to client.", flush=True)
             if new_conv_id:
                 session_state["dify_conversation_id"] = new_conv_id
             
             # Đồng bộ kết quả để UI hiển thị các sản phẩm liên quan
-            if products:
-                # Chuyển đổi sang định dạng response nếu là sản phẩm thô từ cache
-                processed_products = [
-                    to_product_response(p) if "search_blob" in p else p 
-                    for p in products
-                ]
-                session_state["last_results"] = processed_products[:3]
-                
-                # Cập nhật intent và type để các câu hỏi sau (nếu offline) vẫn có ngữ cảnh
-                session_state["last_intent"] = "shopping"
-                if processed_products:
-                    session_state["preferred_type"] = processed_products[0].get("product_type")
+            processed_products = [
+                to_product_response(p) if "search_blob" in p else p 
+                for p in products
+            ]
+            session_state["last_results"] = processed_products[:3]
+            session_state["last_intent"] = "shopping"
 
             response_id = str(uuid.uuid4())
             append_chat_turn(session_state, "user", user_query_raw)
             return finalize_chat_response(session_state, {
                 "answer": answer,
-                "products": [to_product_response(p) if "search_blob" in p else p for p in products],
-                "source_products": [item["name"] for item in products],
-                "confidence": 0.95 if products else 0.8,
+                "products": processed_products,
+                "source_products": [item["name"] for item in products if "name" in item],
+                "confidence": 1.0,
                 "response_id": response_id,
                 "answer_mode": "advice",
             })
+        else:
+            print(f"DEBUG: Dify AI failed to respond. Falling back to Local AI.", flush=True)
 
     # FALLBACK: SỬ DỤNG LOGIC CHATBOT LOCAL NẾU MẤT MẠNG HOẶC DIFY LỖI
     user_query = normalize_user_query(user_query_raw)

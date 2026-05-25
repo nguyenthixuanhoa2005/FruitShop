@@ -117,10 +117,14 @@
 
         addMessage(text, false);
         input.value = '';
+        
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'chatbot-msg ai';
+        loadingDiv.innerHTML = '<i>Đang suy nghĩ...</i>';
+        messagesContainer.appendChild(loadingDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
         try {
-            // Lấy UserId từ session storage (nếu có lưu ở client) hoặc cookie hoặc từ một global variable
-            // Ở đây mình sẽ giả định là có thể lấy từ Razor hoặc một biến toàn cục
             const userId = document.getElementById('session-user-id')?.value || null;
 
             const response = await fetch(`${API_URL}/chat`, {
@@ -133,14 +137,17 @@
                 })
             });
 
+            loadingDiv.remove();
             const data = await response.json();
             console.log('Chatbot API Response:', data);
+            
             if (data.answer) {
                 addMessage(data.answer, true, data.products);
             } else {
                 addMessage("Xin lỗi, mình gặp chút sự cố. Bạn thử lại nhé!", true);
             }
         } catch (error) {
+            if (loadingDiv) loadingDiv.remove();
             console.error('Chatbot Error:', error);
             addMessage("Không thể kết nối với máy chủ chatbot. Vui lòng đảm bảo backend đang chạy.", true);
         }

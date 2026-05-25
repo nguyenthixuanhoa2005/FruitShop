@@ -2437,20 +2437,30 @@ def search_products(user_query: str, limit: int = 3, forced_type: str = None, mu
 
 def is_online():
     """Check if the system is online by trying to reach Dify API or a reliable host."""
-    try:
-        urlrequest.urlopen("https://api.dify.ai", timeout=2)
-        return True
-    except Exception:
+    import ssl
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    
+    # Try multiple hosts to be sure
+    hosts = ["https://api.dify.ai", "https://www.google.com", "https://1.1.1.1"]
+    for host in hosts:
         try:
-            urlrequest.urlopen("https://www.google.com", timeout=2)
+            urlrequest.urlopen(host, timeout=3, context=ctx)
+            print(f"Network check: Online via {host}")
             return True
-        except Exception:
-            return False
+        except Exception as e:
+            print(f"Network check: Failed to reach {host} ({type(e).__name__})")
+            continue
+    return False
 
 
 def call_dify(query: str, session_id: str, conversation_id: str = None):
-    if not DIFY_API_KEY:
+    if not DIFY_API_KEY or not str(DIFY_API_KEY).strip():
+        print("Dify Error: DIFY_API_KEY is empty or not set in config_private.py")
         return None, None, []
+    
+    api_key = str(DIFY_API_KEY).strip()
     
     endpoints = [
         (f"{DIFY_API_URL}/chat-messages", {
@@ -2468,21 +2478,28 @@ def call_dify(query: str, session_id: str, conversation_id: str = None):
     ]
     
     headers = {
-        "Authorization": f"Bearer {DIFY_API_KEY.strip()}",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     
+    import ssl
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
     for endpoint, payload in endpoints:
         try:
+            print(f"Calling Dify: {endpoint}")
             req = urlrequest.Request(
                 endpoint,
                 data=json.dumps(payload).encode("utf-8"),
                 headers=headers,
                 method="POST"
             )
-            with urlrequest.urlopen(req, timeout=30) as resp:
+            with urlrequest.urlopen(req, timeout=35, context=ctx) as resp:
                 body = json.loads(resp.read().decode("utf-8"))
+                print(f"Dify Response: Success from {endpoint}")
                 
                 if "answer" in body:
                     answer = body.get("answer", "")
@@ -2491,6 +2508,7 @@ def call_dify(query: str, session_id: str, conversation_id: str = None):
                     answer = body["data"]["outputs"].get("text") or body["data"]["outputs"].get("answer") or ""
                     new_conv_id = None
                 else:
+                    print(f"Dify Warning: Unexpected response format from {endpoint}: {list(body.keys())}")
                     continue
                 
                 products = []
@@ -2535,7 +2553,8 @@ def call_dify(query: str, session_id: str, conversation_id: str = None):
                     
                 return answer, new_conv_id, products
                 
-        except Exception:
+        except Exception as e:
+            print(f"Dify Error at {endpoint}: {type(e).__name__} - {str(e)}")
             continue
             
     return None, None, []
