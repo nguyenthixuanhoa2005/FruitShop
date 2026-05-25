@@ -402,6 +402,7 @@
 
 </div>
 
+@section Scripts {
 <script>
     // Hàm thiết lập sự kiện cho nút Xem Thêm
     function setupSeeMore(btnId, viewAllId, itemClass) {
@@ -468,7 +469,7 @@
     function quickBuy(productId, productName) {
         const quantity = 1;
 
-        if (!isAuthenticated) {
+        if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
             localStorage.setItem('pendingQuickBuyProduct', productId);
             localStorage.setItem('pendingQuickBuyQuantity', quantity);
             showLoginRequiredModal('Vui lòng đăng nhập để mua sản phẩm.');
@@ -486,12 +487,21 @@
                 sessionStorage.setItem('selectedProducts', JSON.stringify([productId]));
                 // Chuyển đến trang Checkout với ID sản phẩm vừa thêm
                 window.location.href = '/Cart/Checkout?selectedItems=' + productId;
+            } else if (data.requireLogin) {
+                localStorage.setItem('pendingQuickBuyProduct', productId);
+                localStorage.setItem('pendingQuickBuyQuantity', quantity);
+                showLoginRequiredModal('Vui lòng đăng nhập để mua sản phẩm.');
             } else {
-                alert(data.message || 'Có lỗi xảy ra');
+                Swal.fire({ icon: 'error', title: 'Lỗi!', text: data.message || 'Có lỗi xảy ra', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false, timerProgressBar: true });
             }
+        })
+        .catch(err => {
+            console.error('Quick buy error:', err);
+            Swal.fire({ icon: 'error', title: 'Lỗi!', text: 'Có lỗi xảy ra khi kết nối đến máy chủ', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false, timerProgressBar: true });
         });
     }
 </script>
+}
 
 <style>
     .bg-pastel-green { background-color: #f0f9eb; }

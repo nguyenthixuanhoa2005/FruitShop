@@ -135,7 +135,7 @@ namespace FruitShop.Controllers
                     var newCartItem = await _context.CartItems
                          .FirstOrDefaultAsync(c => c.UserId == userId && c.ProductId == request.ProductId && c.Status == 1);
 
-                    return Json(new { success = true, message = "Thêm vào giỏ hàng thành công", cartCount = cart.Count, cartItemId = newCartItem?.Id });
+                    return Json(new { success = true, message = "Thêm vào giỏ hàng thành công", cartCount = cart.Sum(x => x.Value), cartItemId = newCartItem?.Id });
                }
                catch (Exception ex)
                {
@@ -203,7 +203,7 @@ namespace FruitShop.Controllers
                     await _context.SaveChangesAsync();
                     System.Diagnostics.Debug.WriteLine($"Giỏ hàng mới: {newCartJson}");
                     
-                    return Json(new { success = true, message = "Cập nhật thành công", cartCount = cart.Count });
+                    return Json(new { success = true, message = "Cập nhật thành công", cartCount = cart.Sum(x => x.Value) });
                }
                catch (Exception ex)
                {
@@ -883,7 +883,7 @@ namespace FruitShop.Controllers
                     sessionId = sessionId,
                     cartJson = cartJson,
                     cartItems = cart,
-                    cartCount = cart.Count,
+                    cartCount = cart.Sum(x => x.Value), // Đếm tổng số lượng sản phẩm
                     timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")
                });
           }

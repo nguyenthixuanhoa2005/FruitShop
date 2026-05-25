@@ -9,6 +9,8 @@ builder.Services.AddControllersWithViews()
         // Tránh lỗi vòng lặp khi trả về dữ liệu có quan hệ (như Category -> Parent -> Children)
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+        // Chấp nhận cả camelCase và PascalCase từ Client
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
     });
 
 // Cấu hình Session cho Shop

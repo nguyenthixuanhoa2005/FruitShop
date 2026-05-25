@@ -300,6 +300,7 @@
      </div>
 </div>
 
+@section Scripts {
 <script>
      // Variable to store details for the current add to cart action
      let currentAddToCartDetails = null; 
@@ -341,14 +342,14 @@
      function addToCartDetail(productId, productName) {
           const quantity = parseInt(document.querySelector('.product-quantity-detail').value) || 1;
 
-          if (!isAuthenticated) {
+          if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
                localStorage.setItem('pendingCartItem', JSON.stringify({ productId, productName, quantity }));
                showLoginRequiredModal('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.');
                return;
           }
 
           // Store details globally for modal confirmation handler
-          currentAddToCartDetails = { productId, productName, quantity, btn: null }; // btn is not directly available here, might need to pass it or find it differently if needed for reset
+          currentAddToCartDetails = { productId, productName, quantity, btn: null };
 
           // Populate modal with product name
           const modalProductNameEl = document.getElementById('modalProductName');
@@ -356,22 +357,21 @@
                modalProductNameEl.textContent = productName;
           }
 
-          // Show the Bootstrap modal
-          const modal = new bootstrap.Modal(document.getElementById('addToCartConfirmationModal'));
+          // Show the Bootstrap modal using getOrCreateInstance for better robustness
+          const modalElement = document.getElementById('addToCartConfirmationModal');
+          const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
           modal.show();
      }
 
      // Event listener for the modal's confirm button
-     document.getElementById('confirmAddToCartButton').addEventListener('click', function() {
+     document.getElementById('confirmAddToCartButton')?.addEventListener('click', function() {
           const modalElement = document.getElementById('addToCartConfirmationModal');
-          const modal = bootstrap.Modal.getInstance(modalElement);
-          modal.hide(); // Hide modal first
+          const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+          modal.hide();
 
-          if (!currentAddToCartDetails) return; // Should not happen
+          if (!currentAddToCartDetails) return;
 
           const { productId, productName, quantity } = currentAddToCartDetails;
-
-          console.log('Proceeding to AddToCart:', { productId, productName, quantity });
 
           // Proceed with the fetch request now that user confirmed
           fetch('/Cart/AddToCart', {
@@ -379,81 +379,48 @@
                headers: { 'Content-Type': 'application/json' },
                body: JSON.stringify({ productId: productId, quantity: quantity })
           })
-          .then(response => {
-               console.log('Response status:', response.status);
-               return response.json();
-          })
+          .then(response => response.json())
           .then(data => {
-               console.log('Response data:', data);
                if (data.success) {
-                    // Show success notification using SweetAlert2 Toast
+                    // Show success notification
                     Swal.fire({
                         icon: 'success',
                         title: 'Đã thêm vào giỏ hàng!',
-                        html: `<strong>${productName}</strong> (${quantity} cái) đã có trong giỏ hàng của bạn.`,
+                        html: `<strong>${productName}</strong> (${quantity} cái) đã có trong giỏ hàng.`,
                         toast: true,
                         position: 'top-end',
                         showConfirmButton: false,
                         timer: 3000,
-                        timerProgressBar: true,
-                        didOpen: (toast) => {
-                            toast.addEventListener('mouseenter', Swal.stopTimer)
-                            toast.addEventListener('mouseleave', Swal.resumeTimer)
-                        }
+                        timerProgressBar: true
                     });
+                    
                     // Reset quantity input
                     const quantityInput = document.querySelector('.product-quantity-detail');
                     if(quantityInput) quantityInput.value = 1;
 
-                    // Update cart count if function exists
-                    if (typeof updateCartCount === 'function') {
+                    // Update cart count badge
+                    const badge = document.getElementById('cartBadge');
+                    if (badge && data.cartCount !== undefined) {
+                        badge.textContent = data.cartCount;
+                        badge.style.display = data.cartCount > 0 ? 'inline-block' : 'none';
+                    } else if (typeof updateCartCount === 'function') {
                         updateCartCount();
                     }
-                    console.log('Giỏ hàng hiện có:', data.cartCount, 'sản phẩm');
                } else {
-                    // Handle login requirement
                     if (data.requireLogin) {
                         localStorage.setItem('pendingCartItem', JSON.stringify({ productId, productName, quantity }));
-                                     showLoginRequiredModal('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.');
+                        showLoginRequiredModal('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.');
                     } else {
-                        // Show error notification using SweetAlert2 Toast
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Lỗi!',
-                            text: data.message || 'Không thể thêm vào giỏ hàng',
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 3000,
-                            timerProgressBar: true,
-                            didOpen: (toast) => {
-                                toast.addEventListener('mouseenter', Swal.stopTimer)
-                                toast.addEventListener('mouseleave', Swal.resumeTimer)
-                            }
-                        });
+                        Swal.fire({ icon: 'error', title: 'Lỗi!', text: data.message || 'Không thể thêm vào giỏ hàng', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false, timerProgressBar: true });
                     }
                }
           })
           .catch(error => {
                console.error('Error:', error);
-               // Show general error notification using SweetAlert2 Toast
-               Swal.fire({
-                   icon: 'error',
-                   title: 'Lỗi!',
-                   text: 'Có lỗi xảy ra khi thêm vào giỏ hàng',
-                   toast: true,
-                   position: 'top-end',
-                   showConfirmButton: false,
-                   timer: 3000,
-                   timerProgressBar: true,
-                   didOpen: (toast) => {
-                       toast.addEventListener('mouseenter', Swal.stopTimer)
-                       toast.addEventListener('mouseleave', Swal.resumeTimer)
-                   }
-               });
+               Swal.fire({ icon: 'error', title: 'Lỗi!', text: 'Có lỗi xảy ra khi kết nối đến máy chủ', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false, timerProgressBar: true });
           });
           
-          currentAddToCartDetails = null; // Clear stored details after action
+          currentAddToCartDetails = null;
      });
 
      // Revert showToast to use SweetAlert2 as it's preferred for toasts
@@ -466,18 +433,14 @@
               position: 'top-end',
               showConfirmButton: false,
               timer: 3000,
-              timerProgressBar: true,
-              didOpen: (toast) => {
-                  toast.addEventListener('mouseenter', Swal.stopTimer)
-                  toast.addEventListener('mouseleave', Swal.resumeTimer)
-              }
+              timerProgressBar: true
           });
      }
 
      function quickBuyDetail(productId, productName) {
           const quantity = parseInt(document.querySelector('.product-quantity-detail').value) || 1;
 
-          if (!isAuthenticated) { // Assuming isAuthenticated is a global JS variable
+          if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
                localStorage.setItem('pendingQuickBuyProduct', productId);
                localStorage.setItem('pendingQuickBuyQuantity', quantity);
                showLoginRequiredModal('Vui lòng đăng nhập để mua sản phẩm.');
@@ -522,6 +485,7 @@
           element.classList.add('active');
      }
 </script>
+}
 
 <style>
      .thumbnail-container {

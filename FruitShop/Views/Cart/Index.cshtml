@@ -165,8 +165,10 @@
           const selectedItems = document.querySelectorAll('.product-checkbox:checked');
           selectedItems.forEach(item => {
                const quantity = parseInt(item.dataset.quantity);
-               const price = parseInt(item.dataset.price);
-               total += quantity * price;
+               const price = parseFloat(item.dataset.price.replace(',', '.'));
+               if (!isNaN(quantity) && !isNaN(price)) {
+                    total += quantity * price;
+               }
           });
           return total;
      }

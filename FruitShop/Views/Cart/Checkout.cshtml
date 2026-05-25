@@ -131,7 +131,7 @@
                                    </div>
                                    <div class="text-end">
                                         <p class="mb-0 fw-bold text-success small" data-item-total>@total.ToString("N0")đ</p>
-                                        <span class="d-none" data-item-price>@price</span>
+                                        <span class="d-none" data-item-price>@price.ToString("F0")</span>
                                    </div>
                               </div>
                          }
@@ -158,7 +158,7 @@
 
                          <div class="d-flex justify-content-between">
                               <span class="fw-bold">Tổng cộng:</span>
-                              <span class="fw-bold text-success fs-5" data-order-total id="finalTotal">@(subtotal + 30000).ToString("N0") đ</span>
+                              <span class="fw-bold text-success fs-5" data-order-total id="finalTotal">@((subtotal + 30000).ToString("N0")) đ</span>
                          </div>
                     }
                     else
@@ -194,9 +194,12 @@
                const priceText = item.querySelector('[data-item-price]')?.textContent;
                
                if (priceText && quantityText) {
-                    const price = parseInt(priceText.replace(/[^0-9]/g, ''));
+                    // Use parseFloat and handle potential comma as decimal separator
+                    const price = parseFloat(priceText.replace(',', '.'));
                     const quantity = parseInt(quantityText.replace(/[^0-9]/g, ''));
-                    subtotal += price * quantity;
+                    if (!isNaN(price) && !isNaN(quantity)) {
+                         subtotal += price * quantity;
+                    }
                }
           });
           return subtotal;

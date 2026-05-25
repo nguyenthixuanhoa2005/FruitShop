@@ -211,6 +211,7 @@
 </div>
 
 <!-- Scripts -->
+@section Scripts {
 <script>
     let currentSort = '@ViewBag.Sort' || '';
     let currentAddToCartDetails = null;
@@ -289,13 +290,15 @@
         currentAddToCartDetails = { productId, productName, quantity, btn };
         const modalProductNameEl = document.getElementById('modalProductName');
         if (modalProductNameEl) modalProductNameEl.textContent = productName;
-        const modal = new bootstrap.Modal(document.getElementById('addToCartConfirmationModal'));
+        
+        const modalElement = document.getElementById('addToCartConfirmationModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
         modal.show();
     }
 
     document.getElementById('confirmAddToCartButton')?.addEventListener('click', function() {
         const modalElement = document.getElementById('addToCartConfirmationModal');
-        const modal = bootstrap.Modal.getInstance(modalElement);
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
         modal.hide();
         if (!currentAddToCartDetails) return;
         const { productId, productName, quantity, btn } = currentAddToCartDetails;
@@ -303,13 +306,29 @@
         .then(res => res.json()).then(data => {
             if (data.success) {
                 Swal.fire({ icon: 'success', title: 'Đã thêm ' + productName, toast: true, position: 'top-end', timer: 3000, showConfirmButton: false, timerProgressBar: true });
-                if (typeof updateCartCount === 'function') updateCartCount();
-                const quantityInput = btn.parentElement.querySelector('.product-quantity');
-                if(quantityInput) quantityInput.value = 1;
+                
+                // Cập nhật badge ngay lập tức từ dữ liệu trả về
+                const badge = document.getElementById('cartBadge');
+                if (badge && data.cartCount !== undefined) {
+                    badge.textContent = data.cartCount;
+                    badge.style.display = data.cartCount > 0 ? 'inline-block' : 'none';
+                } else if (typeof updateCartCount === 'function') {
+                    updateCartCount();
+                }
+
+                if (btn) {
+                    const quantityInput = btn.parentElement.querySelector('.product-quantity');
+                    if(quantityInput) quantityInput.value = 1;
+                }
             } else if (data.requireLogin) {
                  localStorage.setItem('pendingCartItem', JSON.stringify({ productId, productName, quantity }));
                  showLoginRequiredModal('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.');
+            } else {
+                Swal.fire({ icon: 'error', title: 'Lỗi!', text: data.message || 'Không thể thêm vào giỏ hàng', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false, timerProgressBar: true });
             }
+        }).catch(err => {
+            console.error('Error adding to cart:', err);
+            Swal.fire({ icon: 'error', title: 'Lỗi!', text: 'Có lỗi xảy ra khi kết nối đến máy chủ', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false, timerProgressBar: true });
         });
         currentAddToCartDetails = null;
     });
@@ -347,6 +366,7 @@
         });
     }
 </script>
+}
 
 <style>
     /* CSS Giao diện chung */

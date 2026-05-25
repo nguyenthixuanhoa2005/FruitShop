@@ -144,72 +144,53 @@ namespace FruitShop.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Import(IFormFile file)
         {
-            if (file == null || file.Length == 0) return Json(new { success = false, message = "Vui lòng chọn file Excel" });
+            if (file == null || file.Length == 0) return Json(new { success = false, message = "Vui lòng chọn file Excel hoặc CSV" });
             
+            var extension = Path.GetExtension(file.FileName).ToLower();
+            if (extension != ".xlsx" && extension != ".csv") {
+                return Json(new { success = false, message = "Chỉ hỗ trợ định dạng .xlsx và .csv" });
+            }
+
             var newItems = new List<Category>();
             var errors = new List<string>();
             
             using var transaction = await _context.Database.BeginTransactionAsync();
             try {
-                using var workbook = new XLWorkbook(file.OpenReadStream());
-                var worksheet = workbook.Worksheet(1);
-                var rows = worksheet.RowsUsed().Skip(1); // Bỏ qua tiêu đề
-                
                 // Lấy danh sách tên danh mục hiện có trong DB để check trùng nhanh
                 var existingNames = await _context.Categories.Select(c => c.Name.ToLower().Trim()).ToListAsync();
-                
                 int rowNum = 2;
-                foreach (var row in rows) {
-                    var name = row.Cell(1).GetValue<string>()?.Trim();
-                    var parentName = row.Cell(2).GetValue<string>()?.Trim();
-                    var statusVal = row.Cell(3).GetValue<string>()?.Trim();
 
-                    if (string.IsNullOrEmpty(name)) {
-                        errors.Add($"Dòng {rowNum}: Tên danh mục không được để trống.");
-                        rowNum++; continue;
+                if (extension == ".xlsx") {
+                    using var workbook = new XLWorkbook(file.OpenReadStream());
+                    var worksheet = workbook.Worksheet(1);
+                    var rows = worksheet.RowsUsed().Skip(1); // Bỏ qua tiêu đề
+                    
+                    foreach (var row in rows) {
+                        var name = row.Cell(1).GetValue<string>()?.Trim();
+                        var parentName = row.Cell(2).GetValue<string>()?.Trim();
+                        var statusVal = row.Cell(3).GetValue<string>()?.Trim();
+
+                        await ProcessImportRow(name, parentName, statusVal, rowNum, newItems, existingNames, errors);
+                        rowNum++;
                     }
+                } else {
+                    using var reader = new StreamReader(file.OpenReadStream());
+                    var content = await reader.ReadToEndAsync();
+                    var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                    
+                    // Bỏ qua dòng đầu (header)
+                    for (int i = 1; i < lines.Length; i++) {
+                        var line = lines[i].Trim();
+                        if (string.IsNullOrEmpty(line)) continue;
 
-                    // 1. Kiểm tra trùng tên trong DB
-                    if (existingNames.Contains(name.ToLower())) {
-                        errors.Add($"Dòng {rowNum}: Danh mục '{name}' đã tồn tại trong hệ thống.");
-                        rowNum++; continue;
+                        var cells = line.Split(',');
+                        var name = cells.Length > 0 ? cells[0].Trim().Trim('"') : null;
+                        var parentName = cells.Length > 1 ? cells[1].Trim().Trim('"') : null;
+                        var statusVal = cells.Length > 2 ? cells[2].Trim().Trim('"') : null;
+
+                        await ProcessImportRow(name, parentName, statusVal, rowNum, newItems, existingNames, errors);
+                        rowNum++;
                     }
-
-                    // 2. Kiểm tra trùng tên trong file (những bản ghi đã duyệt qua)
-                    if (newItems.Any(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) {
-                        errors.Add($"Dòng {rowNum}: Tên danh mục '{name}' bị lặp lại trong file.");
-                        rowNum++; continue;
-                    }
-
-                    int? parentId = null;
-                    if (!string.IsNullOrEmpty(parentName)) {
-                        // Ưu tiên tìm trong DB
-                        var p = await _context.Categories.FirstOrDefaultAsync(c => c.Name == parentName);
-                        if (p == null) {
-                            // Nếu không có trong DB, kiểm tra xem có đang được thêm trong file này không
-                            var pInFile = newItems.FirstOrDefault(x => x.Name.Equals(parentName, StringComparison.OrdinalIgnoreCase));
-                            if (pInFile == null) {
-                                errors.Add($"Dòng {rowNum}: Không tìm thấy danh mục cha '{parentName}' trong hệ thống hoặc trong file.");
-                                rowNum++; continue;
-                            }
-                            // Lưu ý: Nếu cha cũng nằm trong file, cần lưu theo thứ tự cha trước con. 
-                            // Ở đây đơn giản hóa là cha phải có ID (đã có trong DB). 
-                            // Nếu muốn hỗ trợ cha-con cùng trong 1 file, cần logic xử lý phức tạp hơn hoặc lưu 2 bước.
-                            // Tạm thời báo lỗi nếu cha chưa có ID.
-                            errors.Add($"Dòng {rowNum}: Danh mục cha '{parentName}' đang được thêm mới trong cùng file, vui lòng chia làm 2 đợt nhập hoặc nhập danh mục cha trước.");
-                            rowNum++; continue;
-                        }
-                        parentId = p.Id;
-                    }
-
-                    byte status = 1;
-                    if (!string.IsNullOrEmpty(statusVal)) {
-                        if (statusVal == "0" || statusVal.ToLower() == "ngừng" || statusVal.ToLower() == "inactive") status = 0;
-                    }
-
-                    var cat = new Category { Name = name, ParentId = parentId, Status = status };
-                    newItems.Add(cat);
-                    rowNum++;
                 }
 
                 if (errors.Any()) {
@@ -231,6 +212,51 @@ namespace FruitShop.Controllers
                 if (transaction != null) await transaction.RollbackAsync();
                 return Json(new { success = false, message = "Lỗi hệ thống khi xử lý file: " + ex.Message });
             }
+        }
+
+        private async Task ProcessImportRow(string? name, string? parentName, string? statusVal, int rowNum, List<Category> newItems, List<string> existingNames, List<string> errors)
+        {
+            if (string.IsNullOrEmpty(name)) {
+                errors.Add($"Dòng {rowNum}: Tên danh mục không được để trống.");
+                return;
+            }
+
+            // 1. Kiểm tra trùng tên trong DB
+            if (existingNames.Contains(name.ToLower())) {
+                errors.Add($"Dòng {rowNum}: Danh mục '{name}' đã tồn tại trong hệ thống.");
+                return;
+            }
+
+            // 2. Kiểm tra trùng tên trong file (những bản ghi đã duyệt qua)
+            if (newItems.Any(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) {
+                errors.Add($"Dòng {rowNum}: Tên danh mục '{name}' bị lặp lại trong file.");
+                return;
+            }
+
+            int? parentId = null;
+            if (!string.IsNullOrEmpty(parentName)) {
+                // Ưu tiên tìm trong DB
+                var p = await _context.Categories.FirstOrDefaultAsync(c => c.Name == parentName);
+                if (p == null) {
+                    // Nếu không có trong DB, kiểm tra xem có đang được thêm trong file này không
+                    var pInFile = newItems.FirstOrDefault(x => x.Name.Equals(parentName, StringComparison.OrdinalIgnoreCase));
+                    if (pInFile == null) {
+                        errors.Add($"Dòng {rowNum}: Không tìm thấy danh mục cha '{parentName}' trong hệ thống hoặc trong file.");
+                        return;
+                    }
+                    errors.Add($"Dòng {rowNum}: Danh mục cha '{parentName}' đang được thêm mới trong cùng file, vui lòng chia làm 2 đợt nhập hoặc nhập danh mục cha trước.");
+                    return;
+                }
+                parentId = p.Id;
+            }
+
+            byte status = 1;
+            if (!string.IsNullOrEmpty(statusVal)) {
+                if (statusVal == "0" || statusVal.ToLower() == "ngừng" || statusVal.ToLower() == "inactive" || statusVal.ToLower() == "ngưng hoạt động") status = 0;
+            }
+
+            var cat = new Category { Name = name, ParentId = parentId, Status = status };
+            newItems.Add(cat);
         }
 
         [HttpGet]
