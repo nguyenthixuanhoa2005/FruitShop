@@ -164,6 +164,11 @@ namespace FruitShop.Controllers
         [HttpPost]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
+            if (model == null)
+            {
+                return View(new RegisterViewModel { ErrorMessage = "Dữ liệu không hợp lệ. Vui lòng thử lại." });
+            }
+
             if (!ModelState.IsValid)
             {
                 var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);

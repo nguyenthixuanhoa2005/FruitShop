@@ -27,7 +27,7 @@
 
                     <div class="bg-light rounded-4 p-4 mb-4" style="border: 3px dashed #198754;">
                          @* Sửa lỗi nhảy giá tiền và đồng bộ nội dung chuyển khoản *@
-                         <img src="https://qr.sepay.vn/img?bank=MB&acc=0988436145&template=compact2&amount=@(Math.Round(Model.TotalAmount ?? 0).ToString("0"))&des=@(System.Net.WebUtility.UrlEncode("ĐH-" + Model.CreatedAt?.ToString("yyyyMMdd") + "-" + Model.Id.ToString("D3"))) " 
+                         <img src="https://qr.sepay.vn/img?bank=MB&acc=0988436145&template=compact2&amount=@(Math.Round(Model.TotalAmount ?? 0).ToString("0"))&des=@(System.Net.WebUtility.UrlEncode("ĐH-" + Model.CreatedAt?.ToString("yyyyMMdd") + "-" + Model.Id.ToString("D3")))" 
                               alt="QR Code" class="img-fluid rounded-3" style="max-width: 100%; height: auto;">
                     </div>
 
@@ -46,7 +46,7 @@
                          <span class="text-muted small">Đang chờ hệ thống xác nhận thanh toán...</span>
                     </div>
 
-                    <p class="text-muted small mb-4">Hệ thống sẽ tự động hoàn tất sau khi nhận được tiền</p>
+                    <p class="text-muted small mb-4">Hệ thống sẽ tự động hoàn tất sau khi nhận được tiền. <br></p>
 
                     <div class="d-grid gap-2">
                          <button type="button" class="btn btn-outline-danger rounded-pill fw-bold py-3" data-bs-toggle="modal" data-bs-target="#cancelTransferModal">
@@ -83,8 +83,10 @@
           try {
                const response = await fetch(`/Cart/GetOrderStatus?orderId=@Model.Id`);
                const data = await response.json();
+               console.log("Trạng thái đơn hàng:", data);
 
                if (data.isPaid || data.paymentStatus == 4 || data.status >= 2) {
+                    console.log("Thanh toán thành công, đang chuyển hướng...");
                     clearInterval(checkPaymentStatus);
                     window.location.href = `/Cart/PaymentSuccess?orderId=@Model.Id`;
                }

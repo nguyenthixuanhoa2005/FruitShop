@@ -687,43 +687,42 @@ namespace FruitShop.Controllers
           {
                try
                {
-                    // Đọc nội dung request thủ công để debug nếu cần
+                    // Đọc nội dung request
                     using var reader = new StreamReader(Request.Body);
                     var body = await reader.ReadToEndAsync();
                     
-                    System.Diagnostics.Debug.WriteLine($"SePay Webhook Received: {body}");
+                    System.Diagnostics.Debug.WriteLine($"[SePay] Webhook Received: {body}");
                     
                     if (string.IsNullOrEmpty(body)) {
-                         return BadRequest(new { success = false, message = "Empty body" });
+                         return Ok(new { success = false, message = "Empty body" });
                     }
 
-                    var data = JsonSerializer.Deserialize<JsonElement>(body);
+                    using var doc = JsonDocument.Parse(body);
+                    var data = doc.RootElement;
 
+                    // 1. Lấy nội dung chuyển khoản (Ưu tiên transaction_content của SePay)
                     string content = string.Empty;
-                    foreach (var key in new[] { "content", "description", "transferContent", "transactionContent", "memo", "des" })
+                    foreach (var key in new[] { "transaction_content", "content", "description", "transferContent", "memo", "des" })
                     {
                          if (data.TryGetProperty(key, out var contentElem) && contentElem.ValueKind == JsonValueKind.String)
                          {
                               content = contentElem.GetString() ?? string.Empty;
-                              if (!string.IsNullOrWhiteSpace(content))
-                              {
-                                   break;
-                              }
+                              if (!string.IsNullOrWhiteSpace(content)) break;
                          }
                     }
 
+                    // 2. Lấy số tiền (Ưu tiên amount_in của SePay)
                     decimal transferAmount = 0;
-                    foreach (var key in new[] { "transferAmount", "amount" })
+                    foreach (var key in new[] { "amount_in", "transferAmount", "amount" })
                     {
                          if (data.TryGetProperty(key, out var amountElem))
                          {
-                              if (amountElem.ValueKind == JsonValueKind.Number && amountElem.TryGetDecimal(out var numericAmount))
+                              if (amountElem.ValueKind == JsonValueKind.Number)
                               {
-                                   transferAmount = numericAmount;
+                                   transferAmount = amountElem.GetDecimal();
                                    break;
                               }
-
-                              if (amountElem.ValueKind == JsonValueKind.String && decimal.TryParse(amountElem.GetString(), out var parsedAmount))
+                              else if (amountElem.ValueKind == JsonValueKind.String && decimal.TryParse(amountElem.GetString(), out var parsedAmount))
                               {
                                    transferAmount = parsedAmount;
                                    break;
@@ -731,106 +730,82 @@ namespace FruitShop.Controllers
                          }
                     }
 
-                    System.Diagnostics.Debug.WriteLine($"Parsed SePay: Content='{content}', Amount={transferAmount}");
+                    System.Diagnostics.Debug.WriteLine($"[SePay] Parsed: Content='{content}', Amount={transferAmount}");
 
+                    // 3. Tìm mã đơn hàng từ nội dung
                     int orderId = ExtractOrderId(content);
-                    System.Diagnostics.Debug.WriteLine($"Extracted OrderID: {orderId}");
+                    System.Diagnostics.Debug.WriteLine($"[SePay] Extracted OrderID: {orderId}");
 
+                    // 4. Nếu không thấy ID trong nội dung, thử tìm theo số tiền
                     if (orderId <= 0 && transferAmount > 0)
                     {
-                         // Tìm kiếm theo số tiền nếu không có mã đơn hàng
-                         var candidateOrderIds = await _context.Orders
-                              .Where(o =>
-                                   (o.Status == 1 || o.Status == null) &&
-                                   o.TotalAmount.HasValue &&
-                                   o.TotalAmount.Value == transferAmount &&
-                                   o.CreatedAt.HasValue &&
-                                   o.CreatedAt.Value >= DateTime.Now.AddDays(-1))
+                         var candidateOrder = await _context.Orders
+                              .Where(o => (o.Status == 1 || o.Status == null) && 
+                                          o.TotalAmount.HasValue && 
+                                          Math.Abs(o.TotalAmount.Value - transferAmount) < 10) // Cho phép sai số nhỏ
                               .OrderByDescending(o => o.CreatedAt)
-                              .Select(o => o.Id)
-                              .Take(2)
-                              .ToListAsync();
+                              .FirstOrDefaultAsync();
 
-                         if (candidateOrderIds.Count == 1)
+                         if (candidateOrder != null)
                          {
-                              orderId = candidateOrderIds[0];
-                              System.Diagnostics.Debug.WriteLine($"Found candidate OrderID by amount: {orderId}");
+                              orderId = candidateOrder.Id;
+                              System.Diagnostics.Debug.WriteLine($"[SePay] Found order by amount: {orderId}");
                          }
                     }
 
                     if (orderId <= 0)
                     {
-                         return Ok(new { success = false, message = "Không tìm thấy đơn hàng trong nội dung chuyển khoản" });
+                         return Ok(new { success = false, message = "Không xác định được mã đơn hàng" });
                     }
 
+                    // 5. Cập nhật trạng thái đơn hàng
                     var order = await _context.Orders.FindAsync(orderId);
-
                     if (order != null && (order.Status == 1 || order.Status == null))
                     {
-                         // Kiểm tra số tiền (cho phép sai số nhỏ hoặc khách chuyển dư)
-                         if (transferAmount >= (order.TotalAmount ?? 0) - 100) 
+                         // Chấp nhận thanh toán nếu số tiền khớp (sai số tối đa 100đ)
+                         if (transferAmount >= (order.TotalAmount ?? 0) - 100)
                          {
-                              order.Status = 2; // 2: Xác nhận (Đã thanh toán)
-
+                              order.Status = 2; // Đã thanh toán / Xác nhận
+                              
                               var payment = await _context.Payments.FirstOrDefaultAsync(p => p.OrderId == orderId);
                               if (payment != null)
                               {
-                                   payment.Status = 4; // 4: Thành công
+                                   payment.Status = 4; // Thành công
                                    if (data.TryGetProperty("id", out var idElem)) payment.TransactionId = idElem.ToString();
-                                   else if (data.TryGetProperty("transactionId", out var txElem)) payment.TransactionId = txElem.ToString();
                               }
 
                               await _context.SaveChangesAsync();
-                              System.Diagnostics.Debug.WriteLine($"Order {orderId} confirmed successfully via SePay");
-                              return Ok(new { success = true, message = "Xác nhận đơn hàng thành công" });
-                         }
-                         else 
-                         {
-                              System.Diagnostics.Debug.WriteLine($"Order {orderId} amount mismatch: Need {order.TotalAmount}, got {transferAmount}");
-                              return Ok(new { success = false, message = "Số tiền không khớp" });
+                              System.Diagnostics.Debug.WriteLine($"[SePay] Order {orderId} updated successfully.");
+                              return Ok(new { success = true, message = "Xác nhận thành công" });
                          }
                     }
 
-                    return Ok(new { success = false, message = "Đơn hàng không tồn tại hoặc đã được xử lý" });
+                    return Ok(new { success = false, message = "Đơn hàng đã được xử lý hoặc không hợp lệ" });
                }
                catch (Exception ex)
                {
-                    System.Diagnostics.Debug.WriteLine($"CRITICAL ERROR in SePayWebhook: {ex.Message}");
-                    System.Diagnostics.Debug.WriteLine(ex.StackTrace);
-                    // Luôn trả về Ok để SePay không gửi lại liên tục nếu đây là lỗi logic, 
-                    // hoặc trả về lỗi cụ thể để debug. Ở đây trả về Ok để tránh loop 500/502 từ phía SePay.
+                    System.Diagnostics.Debug.WriteLine($"[SePay] Error: {ex.Message}");
                     return Ok(new { success = false, error = ex.Message });
                }
           }
 
           private static int ExtractOrderId(string content)
           {
-               if (string.IsNullOrWhiteSpace(content))
-               {
-                    return 0;
-               }
+               if (string.IsNullOrWhiteSpace(content)) return 0;
 
-               var preferredMatch = System.Text.RegularExpressions.Regex.Match(content, @"ĐH-\d{8}-(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-               if (preferredMatch.Success && int.TryParse(preferredMatch.Groups[1].Value, out var preferredId))
-               {
-                    return preferredId;
-               }
+               // Mẫu 1: DH-20240525-001 (đầy đủ dấu)
+               var match1 = System.Text.RegularExpressions.Regex.Match(content, @"(?:DH|ĐH)[-_ ]?\d{8}[-_ ]?(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+               if (match1.Success && int.TryParse(match1.Groups[1].Value, out var id1)) return id1;
 
-               var separatedMatch = System.Text.RegularExpressions.Regex.Match(content, @"\b(?:DH|ĐH)[-_ ]?(\d{8})[-_ ]?(\d{1,6})\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-               if (separatedMatch.Success && int.TryParse(separatedMatch.Groups[2].Value, out var separatedId))
-               {
-                    return separatedId;
-               }
+               // Mẫu 2: DH001 hoặc ĐH001 (không có ngày tháng)
+               var match2 = System.Text.RegularExpressions.Regex.Match(content, @"(?:DH|ĐH)[-_ ]?(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+               if (match2.Success && int.TryParse(match2.Groups[1].Value, out var id2)) return id2;
 
-               var compactContent = new string(content.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
-               var compactMatch = System.Text.RegularExpressions.Regex.Match(compactContent, @"(?:DH|ĐH)(\d{8})(\d{1,6})");
-               if (compactMatch.Success && int.TryParse(compactMatch.Groups[2].Value, out var compactId))
-               {
-                    return compactId;
-               }
+               // Mẫu 3: Chỉ là một chuỗi số ở cuối nội dung (fallback cuối cùng)
+               var match3 = System.Text.RegularExpressions.Regex.Match(content, @"(\d+)(?!.*\d)");
+               if (match3.Success && int.TryParse(match3.Groups[1].Value, out var id3) && id3 < 1000000) return id3;
 
-               var fallbackMatch = System.Text.RegularExpressions.Regex.Match(content, @"(\d+)(?!.*\d)");
-               return fallbackMatch.Success && int.TryParse(fallbackMatch.Groups[1].Value, out var fallbackId) ? fallbackId : 0;
+               return 0;
           }
           
           // 2. API kiểm tra trạng thái đơn hàng (dùng cho JS ở frontend)
@@ -838,12 +813,23 @@ namespace FruitShop.Controllers
           public async Task<IActionResult> GetOrderStatus(int orderId)
           {
                var order = await _context.Orders
-                    .Select(o => new { o.Id, o.Status })
+                    .Include(o => o.Payments)
                     .FirstOrDefaultAsync(o => o.Id == orderId);
           
                if (order == null) return NotFound();
+
+               var payment = order.Payments.FirstOrDefault();
+               var paymentStatus = payment?.Status ?? 0;
+               
+               // status >= 2 means Confirmed/Paid/Shipping etc.
+               // paymentStatus == 4 means Payment Successful (SePay status)
+               bool isPaid = (order.Status >= 2 || paymentStatus == 4);
           
-               return Json(new { status = order.Status });
+               return Json(new { 
+                    status = order.Status, 
+                    paymentStatus = paymentStatus,
+                    isPaid = isPaid
+               });
           }
 
           // 3. Hàm xác nhận thanh toán thủ công (Dùng để Demo/Test nhanh)
