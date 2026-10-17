@@ -113,9 +113,8 @@ namespace FruitShop.Controllers
                 return View(model);
             }
 
-            // TODO: thực hiện xác thực mật khẩu đúng cách (ví dụ: sử dụng hashing và salting)
-            // Temp: so sánh trực tiếp (KHÔNG AN TOÀN, chỉ để demo)
-            if (user.PasswordHash != model.Password)
+            // Xác thực mật khẩu bằng BCrypt
+            if (string.IsNullOrEmpty(user.PasswordHash) || !BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
             {
                 model.ErrorMessage = "Email hoặc mật khẩu không chính xác";
                 return View(model);
@@ -192,7 +191,7 @@ namespace FruitShop.Controllers
                     FullName = model.FullName,
                     Email = model.Email,
                     Phone = model.Phone,
-                    PasswordHash = model.Password, // TODO: Hash password properly
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
                     RoleId = 2, // User role
                     Status = 1,
                     CreatedAt = DateTime.Now
@@ -344,7 +343,7 @@ namespace FruitShop.Controllers
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
             if (user != null)
             {
-                user.PasswordHash = NewPassword; // TODO: Hash password properly
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(NewPassword);
                 
                 // Xóa mã OTP sau khi dùng xong
                 user.ResetToken = null;

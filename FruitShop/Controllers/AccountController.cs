@@ -82,7 +82,7 @@ namespace FruitShop.Controllers
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null) return RedirectToAction("Login", "Home");
 
-            if (user.PasswordHash != currentPassword)
+            if (string.IsNullOrEmpty(user.PasswordHash) || !BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash))
             {
                 ModelState.AddModelError("", "Mật khẩu hiện tại không chính xác");
                 return View();
@@ -94,7 +94,7 @@ namespace FruitShop.Controllers
                 return View();
             }
 
-            user.PasswordHash = newPassword;
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
             _context.Update(user);
             await _context.SaveChangesAsync();
 

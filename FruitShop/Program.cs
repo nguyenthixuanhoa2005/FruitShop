@@ -2,6 +2,18 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
+// Cấu hình HSTS
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(365);
+    options.IncludeSubDomains = true;
+    options.Preload = false;
+
+    //Thêm cái này để chạy test hsts trên localhost
+    options.ExcludedHosts.Clear();
+});
+
 // Add services to the container.
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
@@ -14,12 +26,18 @@ builder.Services.AddControllersWithViews()
     });
 
 // Cấu hình Session cho Shop
+
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
+
+    // Bảo vệ cookie Session
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Lax;
 });
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(); // Hỗ trợ tài liệu API UI
@@ -38,6 +56,7 @@ builder.Services.AddDbContext<FruitShop.Models.FruitShopContext>(options =>
 
 var app = builder.Build();
 
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -47,12 +66,18 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
 }
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();
+// HSTS chỉ bật ngoài môi trường Development
+//if (!app.Environment.IsDevelopment())
+//{
+ app.UseHsts();
+//}
 
+// Chuyển hướng HTTP sang HTTPS
+app.UseHttpsRedirection();
+
+app.UseStaticFiles();
 app.UseRouting();
 
 // Sử dụng Session trước Authorization
