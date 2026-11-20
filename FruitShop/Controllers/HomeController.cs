@@ -113,24 +113,52 @@ namespace FruitShop.Controllers
                 return View(model);
             }
 
-            // Xác thực mật khẩu bằng BCrypt
-            if (string.IsNullOrEmpty(user.PasswordHash) || !BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash))
+            bool isPasswordValid = false;
+            bool needsRehash = false;
+
+            if (!string.IsNullOrEmpty(user.PasswordHash))
+            {
+                try
+                {
+                    // 1. Thử xác thực với BCrypt
+                    isPasswordValid = BCrypt.Net.BCrypt.Verify(model.Password, user.PasswordHash);
+                }
+                catch (BCrypt.Net.SaltParseException)
+                {
+                    // 2. Nếu chuỗi trong DB không phải BCrypt, kiểm tra trực tiếp dạng chưa hash
+                    if (user.PasswordHash == model.Password)
+                    {
+                        isPasswordValid = true;
+                        needsRehash = true; // Đánh dấu để băm lại
+                    }
+                }
+            }
+
+            if (!isPasswordValid)
             {
                 model.ErrorMessage = "Email hoặc mật khẩu không chính xác";
                 return View(model);
             }
 
-            // TODO: Implement proper authentication/session
+            // 3. Tự động băm và cập nhật lại DB nếu đây là mật khẩu cũ chưa hash
+            if (needsRehash)
+            {
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
+                _context.Users.Update(user);
+                await _context.SaveChangesAsync();
+            }
+
+            // Lưu thông tin người dùng vào Session
             HttpContext.Session.SetString("UserId", user.Id.ToString());
             HttpContext.Session.SetString("UserEmail", user.Email);
-            HttpContext.Session.SetString("UserName", user.FullName);
+            HttpContext.Session.SetString("UserName", user.FullName ?? "");
             HttpContext.Session.SetString("UserRole", user.RoleId?.ToString() ?? "2");
 
             // Load giỏ hàng từ database vào Session
             var cartItems = await _context.CartItems
                 .Where(c => c.UserId == user.Id && c.Status == 1)
                 .ToListAsync();
-            
+
             if (cartItems.Count > 0)
             {
                 var cart = new Dictionary<int, int>();
@@ -153,11 +181,6 @@ namespace FruitShop.Controllers
             }
 
             return RedirectToAction("Index", "Products");
-        }
-
-        public IActionResult Register()
-        {
-            return View(new RegisterViewModel());
         }
 
         [HttpPost]

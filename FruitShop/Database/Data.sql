@@ -4,7 +4,7 @@
 USE fruit_shop;
 GO
 
-
+select * from users;
 -- 1. USERS (50 users)
 -- Roles: 1: admin, 2: user, 3: guest
 INSERT INTO users (role_id, full_name, email, phone, password_hash, status, created_at) VALUES

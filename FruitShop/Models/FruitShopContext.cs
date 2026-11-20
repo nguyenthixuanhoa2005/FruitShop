@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,17 +45,17 @@ public partial class FruitShopContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=localhost\\SQLEXPRESS;Database=fruit_shop;Trusted_Connection=True;TrustServerCertificate=True;");
+        => optionsBuilder.UseSqlServer("Server=.;Database=fruit_shop;Trusted_Connection=True;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CartItem>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__cart_ite__3213E83F51D7B2AF");
+            entity.HasKey(e => e.Id).HasName("PK__cart_ite__3213E83F8AC45D47");
 
             entity.ToTable("cart_items");
 
-            entity.HasIndex(e => new { e.UserId, e.SessionId, e.ProductId }, "UQ__cart_ite__9B62268E993176BC").IsUnique();
+            entity.HasIndex(e => new { e.UserId, e.SessionId, e.ProductId }, "UQ__cart_ite__9B62268E2D3E42FE").IsUnique();
 
             entity.HasIndex(e => new { e.SessionId, e.ProductId }, "uq_cart_session_product")
                 .IsUnique()
@@ -83,12 +83,12 @@ public partial class FruitShopContext : DbContext
 
             entity.HasOne(d => d.Product).WithMany(p => p.CartItems)
                 .HasForeignKey(d => d.ProductId)
-                .HasConstraintName("FK__cart_item__produ__4E5E8EA2");
+                .HasConstraintName("FK__cart_item__produ__73BA3083");
         });
 
         modelBuilder.Entity<Category>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__categori__3213E83F6141B68B");
+            entity.HasKey(e => e.Id).HasName("PK__categori__3213E83FF666F369");
 
             entity.ToTable("categories");
 
@@ -103,16 +103,16 @@ public partial class FruitShopContext : DbContext
 
             entity.HasOne(d => d.Parent).WithMany(p => p.InverseParent)
                 .HasForeignKey(d => d.ParentId)
-                .HasConstraintName("FK__categorie__paren__349EBC9F");
+                .HasConstraintName("FK__categorie__paren__59FA5E80");
         });
 
         modelBuilder.Entity<Coupon>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__coupons__3213E83FEC9AD4A8");
+            entity.HasKey(e => e.Id).HasName("PK__coupons__3213E83F0B8952C3");
 
             entity.ToTable("coupons");
 
-            entity.HasIndex(e => e.Code, "UQ__coupons__357D4CF93CBDB057").IsUnique();
+            entity.HasIndex(e => e.Code, "UQ__coupons__357D4CF9FDDC6081").IsUnique();
 
             entity.HasIndex(e => e.Code, "idx_coupons_code");
 
@@ -148,7 +148,7 @@ public partial class FruitShopContext : DbContext
 
         modelBuilder.Entity<CouponUsage>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__coupon_u__3213E83F83E73D56");
+            entity.HasKey(e => e.Id).HasName("PK__coupon_u__3213E83F536DAF2A");
 
             entity.ToTable("coupon_usages");
 
@@ -164,20 +164,20 @@ public partial class FruitShopContext : DbContext
 
             entity.HasOne(d => d.Coupon).WithMany(p => p.CouponUsages)
                 .HasForeignKey(d => d.CouponId)
-                .HasConstraintName("FK__coupon_us__coupo__6265874F");
+                .HasConstraintName("FK__coupon_us__coupo__07C12930");
 
             entity.HasOne(d => d.Order).WithMany(p => p.CouponUsages)
                 .HasForeignKey(d => d.OrderId)
-                .HasConstraintName("FK__coupon_us__order__644DCFC1");
+                .HasConstraintName("FK__coupon_us__order__09A971A2");
 
             entity.HasOne(d => d.User).WithMany(p => p.CouponUsages)
                 .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK__coupon_us__user___6359AB88");
+                .HasConstraintName("FK__coupon_us__user___08B54D69");
         });
 
         modelBuilder.Entity<InventoryLog>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__inventor__3213E83F255D749D");
+            entity.HasKey(e => e.Id).HasName("PK__inventor__3213E83F777890B0");
 
             entity.ToTable("inventory_logs", tb => tb.HasTrigger("trg_inventory_safe"));
 
@@ -198,12 +198,12 @@ public partial class FruitShopContext : DbContext
 
             entity.HasOne(d => d.Product).WithMany(p => p.InventoryLogs)
                 .HasForeignKey(d => d.ProductId)
-                .HasConstraintName("FK__inventory__produ__47B19113");
+                .HasConstraintName("FK__inventory__produ__6D0D32F4");
         });
 
         modelBuilder.Entity<Order>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__orders__3213E83FEB7AEF23");
+            entity.HasKey(e => e.Id).HasName("PK__orders__3213E83F8A00839B");
 
             entity.ToTable("orders");
 
@@ -241,16 +241,16 @@ public partial class FruitShopContext : DbContext
 
             entity.HasOne(d => d.Coupon).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.CouponId)
-                .HasConstraintName("FK__orders__coupon_i__5AC46587");
+                .HasConstraintName("FK__orders__coupon_i__00200768");
 
             entity.HasOne(d => d.User).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK__orders__user_id__59D0414E");
+                .HasConstraintName("FK__orders__user_id__7F2BE32F");
         });
 
         modelBuilder.Entity<OrderItem>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__order_it__3213E83F5A4A661A");
+            entity.HasKey(e => e.Id).HasName("PK__order_it__3213E83F7948D996");
 
             entity.ToTable("order_items");
 
@@ -266,16 +266,16 @@ public partial class FruitShopContext : DbContext
 
             entity.HasOne(d => d.Order).WithMany(p => p.OrderItems)
                 .HasForeignKey(d => d.OrderId)
-                .HasConstraintName("FK__order_ite__order__5DA0D232");
+                .HasConstraintName("FK__order_ite__order__02FC7413");
 
             entity.HasOne(d => d.Product).WithMany(p => p.OrderItems)
                 .HasForeignKey(d => d.ProductId)
-                .HasConstraintName("FK__order_ite__produ__5E94F66B");
+                .HasConstraintName("FK__order_ite__produ__03F0984C");
         });
 
         modelBuilder.Entity<Payment>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__payments__3213E83F02B77129");
+            entity.HasKey(e => e.Id).HasName("PK__payments__3213E83F008B188E");
 
             entity.ToTable("payments");
 
@@ -304,16 +304,16 @@ public partial class FruitShopContext : DbContext
 
             entity.HasOne(d => d.Order).WithMany(p => p.Payments)
                 .HasForeignKey(d => d.OrderId)
-                .HasConstraintName("FK__payments__order___6A06A917");
+                .HasConstraintName("FK__payments__order___0F624AF8");
         });
 
         modelBuilder.Entity<Product>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__products__3213E83FAC56B940");
+            entity.HasKey(e => e.Id).HasName("PK__products__3213E83FD454CFE2");
 
             entity.ToTable("products");
 
-            entity.HasIndex(e => e.Sku, "UQ__products__DDDF4BE7B8920FDB").IsUnique();
+            entity.HasIndex(e => e.Sku, "UQ__products__DDDF4BE7952A84D0").IsUnique();
 
             entity.HasIndex(e => e.CategoryId, "idx_products_category");
 
@@ -359,16 +359,16 @@ public partial class FruitShopContext : DbContext
 
             entity.HasOne(d => d.Category).WithMany(p => p.Products)
                 .HasForeignKey(d => d.CategoryId)
-                .HasConstraintName("FK__products__catego__3E2826D9");
+                .HasConstraintName("FK__products__catego__6383C8BA");
 
             entity.HasOne(d => d.Supplier).WithMany(p => p.Products)
                 .HasForeignKey(d => d.SupplierId)
-                .HasConstraintName("FK__products__suppli__3F1C4B12");
+                .HasConstraintName("FK__products__suppli__6477ECF3");
         });
 
         modelBuilder.Entity<ProductImage>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__product___3213E83F4DCCA384");
+            entity.HasKey(e => e.Id).HasName("PK__product___3213E83F879AB57C");
 
             entity.ToTable("product_images");
 
@@ -385,12 +385,12 @@ public partial class FruitShopContext : DbContext
 
             entity.HasOne(d => d.Product).WithMany(p => p.ProductImages)
                 .HasForeignKey(d => d.ProductId)
-                .HasConstraintName("FK__product_i__produ__42ECDBF6");
+                .HasConstraintName("FK__product_i__produ__68487DD7");
         });
 
         modelBuilder.Entity<Review>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__reviews__3213E83F6E04D380");
+            entity.HasKey(e => e.Id).HasName("PK__reviews__3213E83F1CD7332F");
 
             entity.ToTable("reviews");
 
@@ -410,24 +410,24 @@ public partial class FruitShopContext : DbContext
 
             entity.HasOne(d => d.Order).WithMany(p => p.Reviews)
                 .HasForeignKey(d => d.OrderId)
-                .HasConstraintName("FK__reviews__order_i__71A7CADF");
+                .HasConstraintName("FK_reviews_orders");
 
             entity.HasOne(d => d.Product).WithMany(p => p.Reviews)
                 .HasForeignKey(d => d.ProductId)
-                .HasConstraintName("FK__reviews__product__6FBF826D");
+                .HasConstraintName("FK__reviews__product__151B244E");
 
             entity.HasOne(d => d.User).WithMany(p => p.Reviews)
                 .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK__reviews__user_id__70B3A6A6");
+                .HasConstraintName("FK__reviews__user_id__160F4887");
         });
 
         modelBuilder.Entity<Role>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__roles__3213E83FBF328A77");
+            entity.HasKey(e => e.Id).HasName("PK__roles__3213E83F4B3B0583");
 
             entity.ToTable("roles");
 
-            entity.HasIndex(e => e.Name, "UQ__roles__72E12F1BF548D01B").IsUnique();
+            entity.HasIndex(e => e.Name, "UQ__roles__72E12F1BB410A859").IsUnique();
 
             entity.Property(e => e.Id)
                 .ValueGeneratedOnAdd()
@@ -439,7 +439,7 @@ public partial class FruitShopContext : DbContext
 
         modelBuilder.Entity<Supplier>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__supplier__3213E83FE3E5563D");
+            entity.HasKey(e => e.Id).HasName("PK__supplier__3213E83FB4219265");
 
             entity.ToTable("suppliers");
 
@@ -464,11 +464,11 @@ public partial class FruitShopContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__users__3213E83FCA05E847");
+            entity.HasKey(e => e.Id).HasName("PK__users__3213E83F94509CD6");
 
             entity.ToTable("users");
 
-            entity.HasIndex(e => e.Email, "UQ__users__AB6E6164DCC00A70").IsUnique();
+            entity.HasIndex(e => e.Email, "UQ__users__AB6E61645CFF7A9E").IsUnique();
 
             entity.HasIndex(e => e.RoleId, "idx_users_role");
 
@@ -501,6 +501,8 @@ public partial class FruitShopContext : DbContext
             entity.Property(e => e.Phone)
                 .HasMaxLength(20)
                 .HasColumnName("phone");
+            entity.Property(e => e.ResetToken).HasMaxLength(10);
+            entity.Property(e => e.ResetTokenExpiry).HasColumnType("datetime");
             entity.Property(e => e.RoleId).HasColumnName("role_id");
             entity.Property(e => e.Status)
                 .HasDefaultValue((byte)1)
@@ -508,7 +510,7 @@ public partial class FruitShopContext : DbContext
 
             entity.HasOne(d => d.Role).WithMany(p => p.Users)
                 .HasForeignKey(d => d.RoleId)
-                .HasConstraintName("FK__users__role_id__2CFD9AD7");
+                .HasConstraintName("FK__users__role_id__52593CB8");
         });
 
         OnModelCreatingPartial(modelBuilder);

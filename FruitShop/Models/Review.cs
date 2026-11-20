@@ -7,8 +7,6 @@ public partial class Review
 {
     public int Id { get; set; }
 
-    public int? OrderId { get; set; }
-
     public int? ProductId { get; set; }
 
     public int? UserId { get; set; }
@@ -22,6 +20,8 @@ public partial class Review
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? DeletedAt { get; set; }
+
+    public int? OrderId { get; set; }
 
     public virtual Order? Order { get; set; }
 

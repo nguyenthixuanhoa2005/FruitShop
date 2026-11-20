@@ -214,6 +214,10 @@ CREATE TABLE reviews (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 GO
+-- Dùng ALTER TABLE thêm order_id và khóa ngoại đến orders
+ALTER TABLE reviews ADD order_id INT NULL;
+ALTER TABLE reviews ADD CONSTRAINT FK_reviews_orders FOREIGN KEY (order_id) REFERENCES orders(id);
+go
 
 -- ============================================================
 -- TRIGGER: ĐỒNG BỘ KHO TUYỆT ĐỐI
