@@ -1,0 +1,17 @@
+# Cấu hình Dependabot tự động kiểm tra và tạo Pull Request cập nhật gói NuGet hàng tuần
+version: 2
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/FruitShop"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    # Cấu hình giữ phiên bản trong phạm vi .NET 8 (LTS), không nâng cấp lên .NET 9+
+    ignore:
+      # Chặn tất cả các gói nâng cấp phiên bản lớn (Major update, ví dụ: 8.x -> 9.x)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+      # Đảm bảo tuyệt đối các gói Microsoft (EF Core, Tools) không vượt quá đầu 8
+      - dependency-name: "Microsoft.*"
+        versions: [">= 9.0.0"]

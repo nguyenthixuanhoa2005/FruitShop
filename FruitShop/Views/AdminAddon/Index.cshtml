@@ -1,0 +1,77 @@
+@{
+    ViewData["Title"] = "Quản lý & Cài đặt Add-on / Plugin";
+    Layout = "_AdminLayout";
+}
+
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-shield-check text-primary me-2"></i>Cài Đặt & Quét Add-on Bảo Mật</h2>
+            <p class="text-muted mb-0">Hệ thống chủ động giải nén trong môi trường cách ly và quét mã độc (Malicious Script/Command) trước khi cài đặt.</p>
+        </div>
+    </div>
+
+    @if (ViewBag.Success != null)
+    {
+        <div class="alert alert-success d-flex align-items-center shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill fs-4 me-3"></i>
+            <div>
+                <h5 class="alert-heading mb-1">Xác minh thành công!</h5>
+                <div>@ViewBag.Success</div>
+            </div>
+        </div>
+    }
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert alert-danger d-flex align-items-center shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+            <div>
+                <h5 class="alert-heading mb-1">Thông báo lỗi</h5>
+                <div>@ViewBag.Error</div>
+            </div>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="card-title fw-bold mb-0 text-dark">
+                        <i class="bi bi-cloud-arrow-up text-primary me-2"></i>Tải lên gói Add-on (.zip)
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="Upload" asp-controller="AdminAddon" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Chọn tệp nén Add-on (.zip):</label>
+                            <input type="file" name="addonFile" class="form-control form-control-lg" accept=".zip" required />
+                            <div class="form-text mt-2">
+                                <i class="bi bi-info-circle me-1"></i>Hệ thống sẽ quét tự động: thẻ <code>&lt;script&gt;</code>, sự kiện JS, <code>eval()</code>, <code>Process.Start</code>, Base64 decode, dynamic assembly load...
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg px-4 shadow-sm">
+                            <i class="bi bi-shield-shaded me-2"></i>Tải lên & Quét bảo mật
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 bg-light">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-journal-text text-info me-2"></i>Quy trình kiểm tra an toàn:</h5>
+                    <ol class="list-group list-group-numbered list-group-flush bg-transparent">
+                        <li class="list-group-item bg-transparent px-0 border-0">Chỉ tải add-on/plugin từ nguồn tin cậy của nhà phát hành.</li>
+                        <li class="list-group-item bg-transparent px-0 border-0">Đối chiếu mã băm <code>SHA-256</code> trước khi tải lên.</li>
+                        <li class="list-group-item bg-transparent px-0 border-0">Cách ly và quét tĩnh mã nguồn tự động qua <code>AddonScanner</code>.</li>
+                        <li class="list-group-item bg-transparent px-0 border-0">Hiển thị cảnh báo chi tiết các dòng lệnh đáng ngờ nếu có vi phạm.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

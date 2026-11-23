@@ -1,0 +1,88 @@
+@model List<FruitShop.AddonSecurity.ScanFinding>
+@{
+    ViewData["Title"] = "Cảnh Báo Bảo Mật Add-on";
+    Layout = "_AdminLayout";
+}
+
+<div class="container-fluid px-4 py-4">
+    <!-- Cảnh báo chính màu đỏ -->
+    <div class="alert alert-danger border-danger shadow-sm mb-4 p-4" role="alert">
+        <div class="d-flex align-items-start">
+            <i class="bi bi-shield-fill-x text-danger display-5 me-3"></i>
+            <div>
+                <h3 class="alert-heading fw-bold mb-1 text-danger">
+                    CẢNH BÁO BẢO MẬT: PHÁT HIỆN NGUY CƠ MÃ ĐỘC!
+                </h3>
+                <p class="fs-6 mb-2">
+                    Gói Add-on <strong>@ViewBag.AddonName</strong> chứa <strong>@ViewBag.FindingsCount</strong> dấu hiệu đáng ngờ vi phạm chính sách an toàn. Quá trình cài đặt tự động đã bị <strong>TẠM DỪNG</strong> để bảo vệ máy chủ.
+                </p>
+                <div class="badge bg-danger p-2 fs-7">
+                    <i class="bi bi-exclamation-octagon me-1"></i>Mức độ rủi ro: CAO (High Vulnerability / Malicious Behavior)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bảng chi tiết các phát hiện -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+            <h5 class="card-title fw-bold mb-0 text-dark">
+                <i class="bi bi-list-check text-danger me-2"></i>Danh Sách Tệp & Dòng Lệnh Vi Phạm (Hình 8.5)
+            </h5>
+            <span class="badge bg-danger-subtle text-danger border border-danger px-3 py-2 fw-semibold">
+                Tổng cộng: @Model.Count vi phạm
+            </span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center" style="width: 60px;">STT</th>
+                            <th style="width: 25%;">Tệp tin (File)</th>
+                            <th class="text-center" style="width: 80px;">Dòng</th>
+                            <th style="width: 20%;">Luật phát hiện (Rule)</th>
+                            <th>Đoạn mã đáng ngờ (Snippet)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.Count; i++)
+                        {
+                            var item = Model[i];
+                            <tr>
+                                <td class="text-center fw-bold text-muted">@(i + 1)</td>
+                                <td>
+                                    <i class="bi bi-file-earmark-code text-danger me-1"></i>
+                                    <code>@item.File</code>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary">Dòng @item.Line</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-danger text-white px-2 py-1">
+                                        <i class="bi bi-bug-fill me-1"></i>@item.Rule
+                                    </span>
+                                </td>
+                                <td>
+                                    <code class="text-danger bg-light p-1 rounded d-block" style="word-break: break-all;">
+                                        @item.Snippet
+                                    </code>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white py-3 d-flex justify-content-between align-items-center">
+            <a asp-action="Index" class="btn btn-outline-secondary px-4">
+                <i class="bi bi-arrow-left me-1"></i>Quay lại trang tải lên
+            </a>
+            <div>
+                <a asp-action="Index" class="btn btn-danger px-4 shadow-sm">
+                    <i class="bi bi-x-circle me-1"></i>Hủy bỏ & Cách ly Add-on
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
