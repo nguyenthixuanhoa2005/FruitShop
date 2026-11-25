@@ -114,11 +114,28 @@
                 <i class="bi bi-graph-up"></i>
                 <span class="menu-text">Thống kê</span>
             </a>
-            <a class="menu-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Privacy" ? "active" : "")" 
-               asp-controller="AdminHome" asp-action="Privacy">
+
+            @{
+                var isSecActive = ViewContext.RouteData.Values["Controller"]?.ToString() == "AdminAddon" || 
+                                  (ViewContext.RouteData.Values["Controller"]?.ToString() == "AdminHome" && ViewContext.RouteData.Values["Action"]?.ToString() == "Privacy");
+            }
+            <div class="menu-item has-submenu @(isSecActive ? "active open" : "")">
                 <i class="bi bi-shield-lock"></i>
                 <span class="menu-text">Bảo mật</span>
-            </a>
+                <i class="bi bi-chevron-right arrow"></i>
+            </div>
+            <div class="submenu @(isSecActive ? "open" : "")">
+                <a class="menu-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "AdminAddon" ? "active" : "")" 
+                   href="/AdminAddon">
+                    <i class="bi bi-shield-check"></i>
+                    <span class="menu-text">Kiểm tra Add-on</span>
+                </a>
+                <a class="menu-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "Privacy" ? "active" : "")" 
+                   asp-controller="AdminHome" asp-action="Privacy">
+                    <i class="bi bi-file-earmark-lock"></i>
+                    <span class="menu-text">Chính sách</span>
+                </a>
+            </div>
         </div>
 
         <div class="sidebar-footer">
