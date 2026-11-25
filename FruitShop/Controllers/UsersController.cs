@@ -174,6 +174,39 @@ namespace FruitShop.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleLock(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null || user.DeletedAt != null)
+            {
+                return Json(new { success = false, message = "Người dùng không tồn tại" });
+            }
+
+            bool isCurrentlyLocked = user.Status != 1 || (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow);
+            if (isCurrentlyLocked)
+            {
+                user.Status = 1;
+                user.LockoutEnd = null;
+                user.FailedLoginCount = 0;
+            }
+            else
+            {
+                user.Status = 0;
+                user.LockoutEnd = DateTime.MaxValue;
+            }
+
+            _context.Update(user);
+            await _context.SaveChangesAsync();
+
+            return Json(new
+            {
+                success = true,
+                message = isCurrentlyLocked ? "Đã mở khóa tài khoản thành công" : "Đã khóa vĩnh viễn tài khoản thành công"
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
             try

@@ -52,6 +52,19 @@ CREATE TABLE users (
 );
 ALTER TABLE Users ADD ResetToken NVARCHAR(10);
 ALTER TABLE Users ADD ResetTokenExpiry DATETIME;
+ALTER TABLE users ADD failed_login_count INT NOT NULL DEFAULT 0;
+ALTER TABLE users ADD lockout_end DATETIME2 NULL;
+ALTER TABLE users ADD last_password_changed_at DATETIME2 NULL;
+ALTER TABLE users ADD two_factor_enabled BIT NOT NULL DEFAULT 0;
+ALTER TABLE users ADD two_factor_secret NVARCHAR(128) NULL;
+
+CREATE TABLE password_histories (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    user_id INT NOT NULL,
+    password_hash NVARCHAR(255) NOT NULL,
+    created_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 
 -- 3. SUPPLIERS
 CREATE TABLE suppliers (

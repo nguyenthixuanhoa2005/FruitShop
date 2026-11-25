@@ -1,16 +1,19 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FruitShop.Models;
+using FruitShop.Services;
 
 namespace FruitShop.Controllers
 {
     public class AccountController : Controller
     {
         private readonly FruitShopContext _context;
+        private readonly PasswordPolicyService _passwordPolicy;
 
-        public AccountController(FruitShopContext context)
+        public AccountController(FruitShopContext context, PasswordPolicyService passwordPolicy)
         {
             _context = context;
+            _passwordPolicy = passwordPolicy;
         }
 
         private int GetUserId()
@@ -94,8 +97,23 @@ namespace FruitShop.Controllers
                 return View();
             }
 
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            if (!_passwordPolicy.ValidateStrength(newPassword, out var passwordError))
+            {
+                ModelState.AddModelError("", passwordError);
+                return View();
+            }
+
+            if (await _passwordPolicy.WasUsedBeforeAsync(user.Id, newPassword, user.PasswordHash))
+            {
+                ModelState.AddModelError("", $"Không được sử dụng lại {PasswordPolicyService.HistoryLimit} mật khẩu gần nhất.");
+                return View();
+            }
+
+            var newHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            user.PasswordHash = newHash;
+            user.LastPasswordChangedAt = DateTime.UtcNow;
             _context.Update(user);
+            await _passwordPolicy.RecordPasswordAsync(user.Id, newHash);
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Đổi mật khẩu thành công!";

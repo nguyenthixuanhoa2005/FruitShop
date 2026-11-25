@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Net.Mail;
 using FruitShop.Models;
+using FruitShop.Services;
 using FruitShop.ViewModels;
 
 namespace FruitShop.Controllers
@@ -12,11 +13,22 @@ namespace FruitShop.Controllers
     {
         private readonly FruitShopContext _context;
         private readonly IConfiguration _configuration;
+        private readonly PasswordPolicyService _passwordPolicy;
+        private readonly IpBanService _ipBanService;
+        private readonly ILogger<HomeController> _logger;
 
-        public HomeController(FruitShopContext context, IConfiguration configuration)
+        public HomeController(
+            FruitShopContext context,
+            IConfiguration configuration,
+            PasswordPolicyService passwordPolicy,
+            IpBanService ipBanService,
+            ILogger<HomeController> logger)
         {
             _context = context;
             _configuration = configuration;
+            _passwordPolicy = passwordPolicy;
+            _ipBanService = ipBanService;
+            _logger = logger;
         }
 
         public async Task<IActionResult> Index()
@@ -104,12 +116,44 @@ namespace FruitShop.Controllers
                 return View(model);
             }
 
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (_ipBanService.IsBanned(ip))
+            {
+                _logger.LogWarning("Từ chối đăng nhập từ IP đang bị chặn: ip={Ip}, user={User}", ip, model.Email);
+                Response.StatusCode = 403;
+                model.ErrorMessage = "Địa chỉ IP của bạn đã bị tạm khóa do đăng nhập sai nhiều lần. Vui lòng thử lại sau.";
+                return View(model);
+            }
+
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == model.Email && u.Status == 1);
+                .FirstOrDefaultAsync(u => u.Email == model.Email && u.DeletedAt == null);
 
             if (user == null)
             {
+                var ipFails = _ipBanService.RegisterFailure(ip, IpBanService.FailureWindow);
+                _logger.LogWarning("Đăng nhập thất bại (email không tồn tại): user={User}, ip={Ip}, ipFailCount={Count}", model.Email, ip, ipFails);
+                if (ipFails >= IpBanService.MaxFailures)
+                {
+                    _ipBanService.Ban(ip, IpBanService.BanDuration);
+                    _logger.LogWarning("Đã chặn IP {Ip} trong {Minutes} phút do đăng nhập sai liên tiếp.", ip, IpBanService.BanDuration.TotalMinutes);
+                }
+
                 model.ErrorMessage = "Email hoặc mật khẩu không chính xác";
+                return View(model);
+            }
+
+            if (user.Status != 1 || (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow))
+            {
+                _logger.LogWarning("Cố gắng đăng nhập vào tài khoản đang bị khóa: user={User}, ip={Ip}", model.Email, ip);
+                if (user.Status != 1 || user.LockoutEnd == DateTime.MaxValue)
+                {
+                    model.ErrorMessage = "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.";
+                }
+                else
+                {
+                    var remainingMinutes = Math.Max(1, (int)Math.Ceiling((user.LockoutEnd!.Value - DateTime.UtcNow).TotalMinutes));
+                    model.ErrorMessage = $"Tài khoản tạm thời bị khóa do đăng nhập sai nhiều lần. Vui lòng thử lại sau {remainingMinutes} phút.";
+                }
                 return View(model);
             }
 
@@ -136,14 +180,40 @@ namespace FruitShop.Controllers
 
             if (!isPasswordValid)
             {
-                model.ErrorMessage = "Email hoặc mật khẩu không chính xác";
+                user.FailedLoginCount += 1;
+                if (user.FailedLoginCount >= 5)
+                {
+                    user.LockoutEnd = DateTime.UtcNow.AddMinutes(15);
+                    _logger.LogWarning("Tài khoản bị tạm khóa 15 phút do đăng nhập sai {Count} lần: user={User}, ip={Ip}", user.FailedLoginCount, model.Email, ip);
+                }
+                _context.Users.Update(user);
+                await _context.SaveChangesAsync();
+
+                var ipFails = _ipBanService.RegisterFailure(ip, IpBanService.FailureWindow);
+                _logger.LogWarning("Đăng nhập sai mật khẩu: user={User}, ip={Ip}, userFailCount={UserFails}, ipFailCount={IpFails}", model.Email, ip, user.FailedLoginCount, ipFails);
+                if (ipFails >= IpBanService.MaxFailures)
+                {
+                    _ipBanService.Ban(ip, IpBanService.BanDuration);
+                    _logger.LogWarning("Đã chặn IP {Ip} trong {Minutes} phút do đăng nhập sai liên tiếp.", ip, IpBanService.BanDuration.TotalMinutes);
+                }
+
+                model.ErrorMessage = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow
+                    ? "Tài khoản đã bị tạm khóa 15 phút do đăng nhập sai quá 5 lần."
+                    : "Email hoặc mật khẩu không chính xác";
                 return View(model);
             }
 
-            // 3. Tự động băm và cập nhật lại DB nếu đây là mật khẩu cũ chưa hash
-            if (needsRehash)
+            _ipBanService.ResetFailures(ip);
+
+            // 3. Reset bộ đếm sai & tự động băm lại nếu là mật khẩu cũ chưa hash
+            if (needsRehash || user.FailedLoginCount > 0 || user.LockoutEnd != null)
             {
-                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
+                user.FailedLoginCount = 0;
+                user.LockoutEnd = null;
+                if (needsRehash)
+                {
+                    user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password);
+                }
                 _context.Users.Update(user);
                 await _context.SaveChangesAsync();
             }
@@ -183,6 +253,12 @@ namespace FruitShop.Controllers
             return RedirectToAction("Index", "Products");
         }
 
+        [HttpGet]
+        public IActionResult Register()
+        {
+            return View(new RegisterViewModel());
+        }
+
         [HttpPost]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
@@ -198,6 +274,13 @@ namespace FruitShop.Controllers
                 return View(model);
             }
 
+            if (!_passwordPolicy.ValidateStrength(model.Password, out var passwordError))
+            {
+                ModelState.AddModelError(nameof(model.Password), passwordError);
+                model.ErrorMessage = passwordError;
+                return View(model);
+            }
+
             try
             {
                 var existingUser = await _context.Users
@@ -209,18 +292,23 @@ namespace FruitShop.Controllers
                     return View(model);
                 }
 
+                var hashedPassword = BCrypt.Net.BCrypt.HashPassword(model.Password);
                 var newUser = new User
                 {
                     FullName = model.FullName,
                     Email = model.Email,
                     Phone = model.Phone,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
+                    PasswordHash = hashedPassword,
                     RoleId = 2, // User role
                     Status = 1,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.Now,
+                    LastPasswordChangedAt = DateTime.UtcNow
                 };
 
                 _context.Users.Add(newUser);
+                await _context.SaveChangesAsync();
+
+                await _passwordPolicy.RecordPasswordAsync(newUser.Id, hashedPassword);
                 await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = "Đăng ký tài khoản thành công! Vui lòng đăng nhập.";
@@ -363,15 +451,30 @@ namespace FruitShop.Controllers
                 return View();
             }
 
+            if (!_passwordPolicy.ValidateStrength(NewPassword, out var passwordError))
+            {
+                ViewBag.Error = passwordError;
+                return View();
+            }
+
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
             if (user != null)
             {
-                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(NewPassword);
-                
+                if (await _passwordPolicy.WasUsedBeforeAsync(user.Id, NewPassword, user.PasswordHash))
+                {
+                    ViewBag.Error = $"Không được sử dụng lại {PasswordPolicyService.HistoryLimit} mật khẩu gần nhất.";
+                    return View();
+                }
+
+                var newHash = BCrypt.Net.BCrypt.HashPassword(NewPassword);
+                user.PasswordHash = newHash;
+                user.LastPasswordChangedAt = DateTime.UtcNow;
+
                 // Xóa mã OTP sau khi dùng xong
                 user.ResetToken = null;
                 user.ResetTokenExpiry = null;
-                
+
+                await _passwordPolicy.RecordPasswordAsync(user.Id, newHash);
                 await _context.SaveChangesAsync();
                 
                 // Xóa email khỏi session

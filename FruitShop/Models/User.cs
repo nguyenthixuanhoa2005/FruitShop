@@ -31,9 +31,21 @@ public partial class User
 
     public DateTime? ResetTokenExpiry { get; set; }
 
+    public int FailedLoginCount { get; set; }
+
+    public DateTime? LockoutEnd { get; set; }
+
+    public DateTime? LastPasswordChangedAt { get; set; }
+
+    public bool TwoFactorEnabled { get; set; }
+
+    public string? TwoFactorSecret { get; set; }
+
     public virtual ICollection<CouponUsage> CouponUsages { get; set; } = new List<CouponUsage>();
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+
+    public virtual ICollection<PasswordHistory> PasswordHistories { get; set; } = new List<PasswordHistory>();
 
     public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
 

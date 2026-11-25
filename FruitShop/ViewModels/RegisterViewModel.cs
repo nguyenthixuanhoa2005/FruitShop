@@ -12,7 +12,7 @@ namespace FruitShop.ViewModels
         public string Email { get; set; }
 
         [Required(ErrorMessage = "Mật khẩu không được để trống")]
-        [MinLength(6, ErrorMessage = "Mật khẩu phải từ 6 ký tự trở lên")]
+        [MinLength(12, ErrorMessage = "Mật khẩu phải từ 12 ký tự trở lên")]
         public string Password { get; set; }
 
         [Required(ErrorMessage = "Xác nhận mật khẩu không được để trống")]

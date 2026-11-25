@@ -42,8 +42,11 @@ builder.Services.AddSession(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(); // Hỗ trợ tài liệu API UI
 
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<FruitShop.Services.IpBanService>();
 builder.Services.AddSingleton<FruitShop.Interfaces.ISearchService, FruitShop.Services.MeiliSearchService>();
 builder.Services.AddScoped<FruitShop.Services.MeiliSearchSyncService>();
+builder.Services.AddScoped<FruitShop.Services.PasswordPolicyService>();
 
 // Cho fetch + multipart (FormData): nhận token từ header RequestVerificationToken (khớp với JS trên Products/Index).
 builder.Services.AddAntiforgery(options =>

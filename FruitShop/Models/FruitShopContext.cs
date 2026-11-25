@@ -29,6 +29,8 @@ public partial class FruitShopContext : DbContext
 
     public virtual DbSet<OrderItem> OrderItems { get; set; }
 
+    public virtual DbSet<PasswordHistory> PasswordHistories { get; set; }
+
     public virtual DbSet<Payment> Payments { get; set; }
 
     public virtual DbSet<Product> Products { get; set; }
@@ -503,6 +505,17 @@ public partial class FruitShopContext : DbContext
                 .HasColumnName("phone");
             entity.Property(e => e.ResetToken).HasMaxLength(10);
             entity.Property(e => e.ResetTokenExpiry).HasColumnType("datetime");
+            entity.Property(e => e.FailedLoginCount)
+                .HasDefaultValue(0)
+                .HasColumnName("failed_login_count");
+            entity.Property(e => e.LockoutEnd).HasColumnName("lockout_end");
+            entity.Property(e => e.LastPasswordChangedAt).HasColumnName("last_password_changed_at");
+            entity.Property(e => e.TwoFactorEnabled)
+                .HasDefaultValue(false)
+                .HasColumnName("two_factor_enabled");
+            entity.Property(e => e.TwoFactorSecret)
+                .HasMaxLength(128)
+                .HasColumnName("two_factor_secret");
             entity.Property(e => e.RoleId).HasColumnName("role_id");
             entity.Property(e => e.Status)
                 .HasDefaultValue((byte)1)
@@ -511,6 +524,28 @@ public partial class FruitShopContext : DbContext
             entity.HasOne(d => d.Role).WithMany(p => p.Users)
                 .HasForeignKey(d => d.RoleId)
                 .HasConstraintName("FK__users__role_id__52593CB8");
+        });
+
+        modelBuilder.Entity<PasswordHistory>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.ToTable("password_histories");
+
+            entity.HasIndex(e => new { e.UserId, e.CreatedAt }, "idx_password_histories_user_created");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.PasswordHash)
+                .HasMaxLength(255)
+                .HasColumnName("password_hash");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnName("created_at");
+
+            entity.HasOne(d => d.User).WithMany(p => p.PasswordHistories)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_password_histories_users");
         });
 
         OnModelCreatingPartial(modelBuilder);
