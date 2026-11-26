@@ -10,12 +10,14 @@ namespace FruitShop.Controllers
         private readonly FruitShopContext _context;
         private readonly PasswordPolicyService _passwordPolicy;
         private readonly TotpService _totpService;
+        private readonly SensitiveDataService _sensitiveData;
 
-        public AccountController(FruitShopContext context, PasswordPolicyService passwordPolicy, TotpService totpService)
+        public AccountController(FruitShopContext context, PasswordPolicyService passwordPolicy, TotpService totpService, SensitiveDataService sensitiveData)
         {
             _context = context;
             _passwordPolicy = passwordPolicy;
             _totpService = totpService;
+            _sensitiveData = sensitiveData;
         }
 
         private int GetUserId()
@@ -30,9 +32,10 @@ namespace FruitShop.Controllers
             var userId = GetUserId();
             if (userId == 0) return RedirectToAction("Login", "Home");
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null) return RedirectToAction("Login", "Home");
 
+            user.Phone = _sensitiveData.Unprotect(user.Phone);
             return View(user);
         }
 
@@ -41,9 +44,10 @@ namespace FruitShop.Controllers
             var userId = GetUserId();
             if (userId == 0) return RedirectToAction("Login", "Home");
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null) return RedirectToAction("Login", "Home");
 
+            user.Phone = _sensitiveData.Unprotect(user.Phone);
             return View(user);
         }
 
@@ -57,7 +61,7 @@ namespace FruitShop.Controllers
             if (user == null) return RedirectToAction("Login", "Home");
 
             user.FullName = model.FullName;
-            user.Phone = model.Phone;
+            user.Phone = _sensitiveData.Protect(model.Phone);
             // Cập nhật các trường khác nếu cần
 
             _context.Update(user);

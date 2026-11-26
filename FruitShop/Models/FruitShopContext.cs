@@ -501,7 +501,7 @@ public partial class FruitShopContext : DbContext
                 .HasMaxLength(255)
                 .HasColumnName("password_hash");
             entity.Property(e => e.Phone)
-                .HasMaxLength(20)
+                .HasMaxLength(500)
                 .HasColumnName("phone");
             entity.Property(e => e.ResetToken).HasMaxLength(10);
             entity.Property(e => e.ResetTokenExpiry).HasColumnType("datetime");

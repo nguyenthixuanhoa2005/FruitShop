@@ -16,6 +16,7 @@ namespace FruitShop.Controllers
         private readonly PasswordPolicyService _passwordPolicy;
         private readonly IpBanService _ipBanService;
         private readonly TotpService _totpService;
+        private readonly SensitiveDataService _sensitiveData;
         private readonly ILogger<HomeController> _logger;
 
         public HomeController(
@@ -24,6 +25,7 @@ namespace FruitShop.Controllers
             PasswordPolicyService passwordPolicy,
             IpBanService ipBanService,
             TotpService totpService,
+            SensitiveDataService sensitiveData,
             ILogger<HomeController> logger)
         {
             _context = context;
@@ -31,6 +33,7 @@ namespace FruitShop.Controllers
             _passwordPolicy = passwordPolicy;
             _ipBanService = ipBanService;
             _totpService = totpService;
+            _sensitiveData = sensitiveData;
             _logger = logger;
         }
 
@@ -358,7 +361,7 @@ namespace FruitShop.Controllers
                 {
                     FullName = model.FullName,
                     Email = model.Email,
-                    Phone = model.Phone,
+                    Phone = _sensitiveData.Protect(model.Phone),
                     PasswordHash = hashedPassword,
                     RoleId = 2, // User role
                     Status = 1,

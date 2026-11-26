@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,6 +46,13 @@ builder.Services.AddSwaggerGen(); // Hỗ trợ tài liệu API UI
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<FruitShop.Services.IpBanService>();
 builder.Services.AddSingleton<FruitShop.Services.TotpService>();
+
+var keysDirectory = new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "..", "Keys"));
+if (!keysDirectory.Exists) keysDirectory.Create();
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(keysDirectory)
+    .SetApplicationName("FruitShop");
+builder.Services.AddSingleton<FruitShop.Services.SensitiveDataService>();
 builder.Services.AddSingleton<FruitShop.Interfaces.ISearchService, FruitShop.Services.MeiliSearchService>();
 builder.Services.AddScoped<FruitShop.Services.MeiliSearchSyncService>();
 builder.Services.AddScoped<FruitShop.Services.PasswordPolicyService>();

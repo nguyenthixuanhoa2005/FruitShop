@@ -58,6 +58,7 @@ ALTER TABLE users ADD last_password_changed_at DATETIME2 NULL;
 ALTER TABLE users ADD two_factor_enabled BIT NOT NULL DEFAULT 0;
 ALTER TABLE users ADD two_factor_secret NVARCHAR(128) NULL;
 
+ALTER TABLE Users ALTER COLUMN phone NVARCHAR(500) NULL;
 CREATE TABLE password_histories (
     id INT IDENTITY(1,1) PRIMARY KEY,
     user_id INT NOT NULL,

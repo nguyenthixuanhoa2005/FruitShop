@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using FruitShop.Models;
 using FruitShop.ViewModels;
 using FruitShop.Interfaces;
+using FruitShop.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,12 +20,14 @@ namespace FruitShop.Controllers
     {
         private readonly FruitShopContext _context;
         private readonly ISearchService _searchService;
+        private readonly SensitiveDataService _sensitiveData;
         private const string INDEX_NAME = "users";
 
-        public UsersController(FruitShopContext context, ISearchService searchService)
+        public UsersController(FruitShopContext context, ISearchService searchService, SensitiveDataService sensitiveData)
         {
             _context = context;
             _searchService = searchService;
+            _sensitiveData = sensitiveData;
         }
 
         public async Task<IActionResult> Index(
@@ -62,10 +65,16 @@ namespace FruitShop.Controllers
 
             int totalItems = await query.CountAsync();
             var data = await query
+                .AsNoTracking()
                 .OrderByDescending(u => u.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
+
+            foreach (var u in data)
+            {
+                u.Phone = _sensitiveData.Unprotect(u.Phone);
+            }
 
             var model = new UserList
             {
@@ -99,7 +108,7 @@ namespace FruitShop.Controllers
                     u.Id,
                     u.FullName,
                     u.Email,
-                    u.Phone,
+                    Phone = _sensitiveData.Unprotect(u.Phone),
                     u.RoleId,
                     RoleName = u.Role?.Name,
                     u.Status,
@@ -120,6 +129,7 @@ namespace FruitShop.Controllers
                 {
                     user.CreatedAt = DateTime.UtcNow;
                     user.Status = 1;
+                    user.Phone = _sensitiveData.Protect(user.Phone);
                     // Note: Password hashing should be handled here if not already
                     _context.Add(user);
                     await _context.SaveChangesAsync();
@@ -153,7 +163,7 @@ namespace FruitShop.Controllers
 
                     existing.FullName = user.FullName;
                     existing.Email = user.Email;
-                    existing.Phone = user.Phone;
+                    existing.Phone = _sensitiveData.Protect(user.Phone);
                     existing.RoleId = user.RoleId;
                     existing.Status = user.Status;
                     existing.IsVerified = user.IsVerified;
@@ -283,7 +293,7 @@ namespace FruitShop.Controllers
             {
                 ws.Cell(i + 2, 1).Value = data[i].FullName;
                 ws.Cell(i + 2, 2).Value = data[i].Email;
-                ws.Cell(i + 2, 3).Value = data[i].Phone;
+                ws.Cell(i + 2, 3).Value = _sensitiveData.Unprotect(data[i].Phone);
                 ws.Cell(i + 2, 4).Value = data[i].Role?.Name;
                 ws.Cell(i + 2, 5).Value = data[i].Status == 1 ? "Hoạt động" : "Khóa";
                 ws.Cell(i + 2, 6).Value = data[i].CreatedAt?.ToString("dd/MM/yyyy HH:mm");

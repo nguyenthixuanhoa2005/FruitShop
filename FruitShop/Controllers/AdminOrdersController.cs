@@ -13,6 +13,7 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 
 using FruitShop.Filters;
+using FruitShop.Services;
 
 namespace FruitShop.Controllers
 {
@@ -20,7 +21,12 @@ namespace FruitShop.Controllers
     public class AdminOrdersController : Controller
     {
         private readonly FruitShopContext _context;
-        public AdminOrdersController(FruitShopContext context) { _context = context; }
+        private readonly SensitiveDataService _sensitiveData;
+        public AdminOrdersController(FruitShopContext context, SensitiveDataService sensitiveData)
+        {
+            _context = context;
+            _sensitiveData = sensitiveData;
+        }
 
         public async Task<IActionResult> Index(
             string? searchTerm, 
@@ -80,7 +86,7 @@ namespace FruitShop.Controllers
                 .Select(o => new OrderListItem { 
                     Id = o.Id, 
                     CustomerName = o.ReceiverName ?? o.User?.FullName ?? "Khách vãng lai", 
-                    Phone = o.ReceiverPhone ?? o.User?.Phone ?? "",
+                    Phone = o.ReceiverPhone ?? _sensitiveData.Unprotect(o.User?.Phone) ?? "",
                     CreatedAt = o.CreatedAt ?? DateTime.Now, 
                     TotalAmount = o.TotalAmount ?? 0, 
                     Status = o.Status ?? 1, 
@@ -112,7 +118,7 @@ namespace FruitShop.Controllers
             var data = new {
                 id = order.Id,
                 receiverName = order.ReceiverName ?? order.User?.FullName,
-                receiverPhone = order.ReceiverPhone ?? order.User?.Phone,
+                receiverPhone = order.ReceiverPhone ?? _sensitiveData.Unprotect(order.User?.Phone),
                 receiverAddress = order.ReceiverAddress,
                 note = order.Note,
                 createdAt = order.CreatedAt?.ToString("dd/MM/yyyy HH:mm"),
@@ -166,7 +172,7 @@ namespace FruitShop.Controllers
             for (int i = 0; i < orders.Count; i++) { 
                 ws.Cell(i + 2, 1).Value = orders[i].Id; 
                 ws.Cell(i + 2, 2).Value = orders[i].ReceiverName ?? orders[i].User?.FullName; 
-                ws.Cell(i + 2, 3).Value = orders[i].ReceiverPhone ?? orders[i].User?.Phone;
+                ws.Cell(i + 2, 3).Value = orders[i].ReceiverPhone ?? _sensitiveData.Unprotect(orders[i].User?.Phone);
                 ws.Cell(i + 2, 4).Value = orders[i].ReceiverAddress;
                 ws.Cell(i + 2, 5).Value = (double)(orders[i].TotalAmount ?? 0);
                 ws.Cell(i + 2, 6).Value = orders[i].CreatedAt;
