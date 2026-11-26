@@ -10,8 +10,11 @@ using System.Threading.Tasks;
 using System.IO;
 using ClosedXML.Excel;
 
+using FruitShop.Filters;
+
 namespace FruitShop.Controllers
 {
+    [AdminSecurityFilter]
     public class UsersController : Controller
     {
         private readonly FruitShopContext _context;

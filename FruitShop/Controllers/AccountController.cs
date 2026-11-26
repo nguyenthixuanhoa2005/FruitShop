@@ -9,11 +9,13 @@ namespace FruitShop.Controllers
     {
         private readonly FruitShopContext _context;
         private readonly PasswordPolicyService _passwordPolicy;
+        private readonly TotpService _totpService;
 
-        public AccountController(FruitShopContext context, PasswordPolicyService passwordPolicy)
+        public AccountController(FruitShopContext context, PasswordPolicyService passwordPolicy, TotpService totpService)
         {
             _context = context;
             _passwordPolicy = passwordPolicy;
+            _totpService = totpService;
         }
 
         private int GetUserId()
@@ -97,7 +99,7 @@ namespace FruitShop.Controllers
                 return View();
             }
 
-            if (!_passwordPolicy.ValidateStrength(newPassword, out var passwordError))
+            if (!_passwordPolicy.ValidateStrength(newPassword, out var passwordError, isAdmin: user.RoleId == 1))
             {
                 ModelState.AddModelError("", passwordError);
                 return View();
@@ -117,7 +119,106 @@ namespace FruitShop.Controllers
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Đổi mật khẩu thành công!";
+            if (user.RoleId == 1)
+            {
+                return RedirectToAction("Index", "AdminHome");
+            }
             return RedirectToAction("Index");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> EnableTwoFactor()
+        {
+            var userId = GetUserId();
+            if (userId == 0) return RedirectToAction("Login", "Home");
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId && u.DeletedAt == null);
+            if (user == null) return RedirectToAction("Login", "Home");
+
+            ViewBag.TwoFactorEnabled = user.TwoFactorEnabled;
+            ViewBag.IsAdmin = user.RoleId == 1;
+
+            if (!user.TwoFactorEnabled)
+            {
+                var secret = HttpContext.Session.GetString("Pending2FASetupSecret");
+                if (string.IsNullOrEmpty(secret))
+                {
+                    secret = _totpService.GenerateSecretKey();
+                    HttpContext.Session.SetString("Pending2FASetupSecret", secret);
+                }
+
+                var uri = _totpService.BuildOtpAuthUri(user.Email ?? user.FullName ?? "user", secret);
+                ViewBag.SecretKey = secret;
+                ViewBag.QrCodeDataUri = _totpService.GenerateQrCodeDataUri(uri);
+            }
+
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EnableTwoFactor(string code)
+        {
+            var userId = GetUserId();
+            if (userId == 0) return RedirectToAction("Login", "Home");
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId && u.DeletedAt == null);
+            if (user == null) return RedirectToAction("Login", "Home");
+
+            var secret = HttpContext.Session.GetString("Pending2FASetupSecret");
+            if (string.IsNullOrEmpty(secret))
+            {
+                return RedirectToAction("EnableTwoFactor");
+            }
+
+            if (!_totpService.VerifyCode(secret, code))
+            {
+                ViewBag.Error = "Mã xác thực 6 số không đúng hoặc đã hết hạn. Vui lòng thử lại.";
+                ViewBag.TwoFactorEnabled = false;
+                ViewBag.IsAdmin = user.RoleId == 1;
+                var uri = _totpService.BuildOtpAuthUri(user.Email ?? user.FullName ?? "user", secret);
+                ViewBag.SecretKey = secret;
+                ViewBag.QrCodeDataUri = _totpService.GenerateQrCodeDataUri(uri);
+                return View();
+            }
+
+            user.TwoFactorSecret = secret;
+            user.TwoFactorEnabled = true;
+            _context.Update(user);
+            await _context.SaveChangesAsync();
+            HttpContext.Session.Remove("Pending2FASetupSecret");
+
+            TempData["SuccessMessage"] = "Đã kích hoạt xác thực 2 yếu tố (2FA) thành công!";
+            if (user.RoleId == 1)
+            {
+                return RedirectToAction("Index", "AdminHome");
+            }
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DisableTwoFactor()
+        {
+            var userId = GetUserId();
+            if (userId == 0) return RedirectToAction("Login", "Home");
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId && u.DeletedAt == null);
+            if (user == null) return RedirectToAction("Login", "Home");
+
+            if (user.RoleId == 1)
+            {
+                TempData["SecurityWarning"] = "Tài khoản quản trị bắt buộc phải bật xác thực 2 yếu tố (2FA).";
+                return RedirectToAction("EnableTwoFactor");
+            }
+
+            user.TwoFactorEnabled = false;
+            user.TwoFactorSecret = null;
+            _context.Update(user);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Đã tắt xác thực 2 yếu tố (2FA).";
+            return RedirectToAction("EnableTwoFactor");
         }
     }
 }

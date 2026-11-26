@@ -6,8 +6,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
+using FruitShop.Filters;
+
 namespace FruitShop.Controllers
 {
+    [AdminSecurityFilter]
     public class StatisticsController : Controller
     {
         private readonly FruitShopContext _context;

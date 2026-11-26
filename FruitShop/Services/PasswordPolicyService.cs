@@ -17,12 +17,18 @@ namespace FruitShop.Services
         public const int MinimumUniqueChars = 4;
         public const int HistoryLimit = 3;
 
+        private static readonly string[] AdminForbiddenWords =
+        {
+            "admin", "administrator", "root", "password", "passw0rd",
+            "fruitshop", "123456", "12345678", "qwerty", "letmein", "welcome"
+        };
+
         public PasswordPolicyService(FruitShopContext context)
         {
             _context = context;
         }
 
-        public bool ValidateStrength(string? password, out string errorMessage)
+        public bool ValidateStrength(string? password, out string errorMessage, bool isAdmin = false)
         {
             if (string.IsNullOrEmpty(password) || password.Length < MinimumLength)
             {
@@ -58,6 +64,17 @@ namespace FruitShop.Services
             {
                 errorMessage = $"Mật khẩu phải chứa ít nhất {MinimumUniqueChars} ký tự khác nhau.";
                 return false;
+            }
+
+            if (isAdmin)
+            {
+                var matchedWord = AdminForbiddenWords.FirstOrDefault(w =>
+                    password.Contains(w, StringComparison.OrdinalIgnoreCase));
+                if (matchedWord != null)
+                {
+                    errorMessage = $"Mật khẩu quản trị không được chứa từ dễ đoán (\"{matchedWord}\").";
+                    return false;
+                }
             }
 
             errorMessage = string.Empty;

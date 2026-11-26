@@ -1,0 +1,134 @@
+@{
+    ViewData["Title"] = "Xác thực 2 yếu tố (2FA)";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    bool isEnabled = ViewBag.TwoFactorEnabled == true;
+    bool isAdmin = ViewBag.IsAdmin == true;
+}
+
+<div class="container py-5">
+    <div class="row g-4">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="text-center mb-4">
+                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
+                        @(Context.Session.GetString("UserName")?.Substring(0, 1) ?? "U")
+                    </div>
+                    <h5 class="fw-bold mb-0">@Context.Session.GetString("UserName")</h5>
+                    <p class="text-muted small">@Context.Session.GetString("UserEmail")</p>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a asp-action="Index" class="list-group-item list-group-item-action border-0 py-3 rounded-3 mb-2">
+                        <i class="fas fa-user me-2"></i>Thông tin cá nhân
+                    </a>
+                    <a asp-action="EditProfile" class="list-group-item list-group-item-action border-0 py-3 rounded-3 mb-2">
+                        <i class="fas fa-user-edit me-2"></i>Chỉnh sửa hồ sơ
+                    </a>
+                    <a asp-action="ChangePassword" class="list-group-item list-group-item-action border-0 py-3 rounded-3 mb-2">
+                        <i class="fas fa-key me-2"></i>Đổi mật khẩu
+                    </a>
+                    <a asp-action="EnableTwoFactor" class="list-group-item list-group-item-action border-0 py-3 active rounded-3 mb-2">
+                        <i class="fas fa-shield-alt me-2"></i>Xác thực 2FA
+                    </a>
+                    <a asp-controller="Orders" asp-action="Index" class="list-group-item list-group-item-action border-0 py-3 rounded-3">
+                        <i class="fas fa-shopping-bag me-2"></i>Đơn hàng của tôi
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <h4 class="fw-bold mb-4">Xác thực 2 yếu tố (2FA - TOTP)</h4>
+
+                @if (TempData["SecurityWarning"] != null)
+                {
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>@TempData["SecurityWarning"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        @TempData["SuccessMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(ViewBag.Error as string))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        @ViewBag.Error
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                @if (isEnabled)
+                {
+                    <div class="alert alert-success d-flex align-items-center" role="alert">
+                        <i class="fas fa-check-circle fa-lg me-3"></i>
+                        <div>
+                            <strong>Xác thực 2 yếu tố (2FA) đang được bật.</strong>
+                            <div class="small">Tài khoản của bạn được bảo vệ bằng mã 6 số từ ứng dụng Authenticator.</div>
+                        </div>
+                    </div>
+
+                    @if (isAdmin)
+                    {
+                        <p class="text-muted small mb-0">
+                            <i class="fas fa-lock me-1"></i> Tài khoản quản trị bắt buộc duy trì bật 2FA.
+                        </p>
+                        <div class="mt-3">
+                            <a asp-controller="AdminHome" asp-action="Index" class="btn btn-success rounded-pill px-4 fw-bold">Vào trang Quản trị</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <form asp-action="DisableTwoFactor" method="post" class="mt-3">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-danger rounded-pill px-4 fw-bold"
+                                    onclick="return confirm('Bạn có chắc chắn muốn tắt xác thực 2 yếu tố (2FA)?');">
+                                Tắt xác thực 2FA
+                            </button>
+                        </form>
+                    }
+                }
+                else
+                {
+                    <div class="row g-4 align-items-center">
+                        <div class="col-md-5 text-center">
+                            <div class="p-3 border rounded-4 bg-light d-inline-block">
+                                <img src="@ViewBag.QrCodeDataUri" alt="QR Code 2FA" class="img-fluid" style="max-width: 220px;" />
+                            </div>
+                            <p class="text-muted small mt-2 mb-1">Hoặc nhập mã thủ công:</p>
+                            <code class="fs-6 fw-bold user-select-all">@ViewBag.SecretKey</code>
+                        </div>
+                        <div class="col-md-7">
+                            <ol class="small text-muted ps-3 mb-4">
+                                <li class="mb-2">Mở ứng dụng <strong>Google Authenticator</strong> hoặc <strong>Microsoft Authenticator</strong> trên điện thoại.</li>
+                                <li class="mb-2">Chọn <strong>Quét mã QR</strong> (hoặc nhập mã bí mật bên trái).</li>
+                                <li>Nhập mã 6 chữ số hiển thị trên ứng dụng vào ô dưới đây để hoàn tất kích hoạt.</li>
+                            </ol>
+
+                            <form asp-action="EnableTwoFactor" method="post">
+                                @Html.AntiForgeryToken()
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-muted">Mã xác thực 6 số</label>
+                                    <input type="text" name="code" maxlength="6" pattern="\d{6}" inputmode="numeric"
+                                           class="form-control form-control-lg rounded-3 text-center fw-bold"
+                                           placeholder="000000" required autofocus />
+                                </div>
+                                <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold">
+                                    <i class="fas fa-check me-2"></i>Xác nhận &amp; Kích hoạt 2FA
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

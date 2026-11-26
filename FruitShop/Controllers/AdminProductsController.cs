@@ -17,8 +17,11 @@ using ClosedXML.Excel;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 
+using FruitShop.Filters;
+
 namespace FruitShop.Controllers
 {
+    [AdminSecurityFilter]
     public class AdminProductsController : Controller
     {
         private readonly FruitShopContext _context;

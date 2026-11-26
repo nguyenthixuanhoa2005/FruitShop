@@ -7,8 +7,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
+using FruitShop.Filters;
+
 namespace FruitShop.Controllers
 {
+    [AdminSecurityFilter]
     public class DashboardController : Controller
     {
         private readonly FruitShopContext _context;

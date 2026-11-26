@@ -13,8 +13,11 @@ using System.Xml.Serialization;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 
+using FruitShop.Filters;
+
 namespace FruitShop.Controllers
 {
+    [AdminSecurityFilter]
     public class CouponsController : Controller
     {
         private readonly FruitShopContext _context;

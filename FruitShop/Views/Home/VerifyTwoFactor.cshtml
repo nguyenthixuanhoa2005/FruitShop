@@ -1,0 +1,62 @@
+@{
+    ViewData["Title"] = "Xác thực 2 yếu tố (2FA)";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="login-container">
+    <div class="login-box">
+        <h2 class="login-title">Xác Thực 2 Yếu Tố</h2>
+        <p class="text-muted text-center mb-4">Mở ứng dụng Authenticator và nhập mã 6 chữ số để hoàn tất đăng nhập.</p>
+
+        @if (!string.IsNullOrEmpty(ViewBag.Error as string))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @ViewBag.Error
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        <form method="post" action="@Url.Action("VerifyTwoFactor", "Home")">
+            @Html.AntiForgeryToken()
+            <div class="mb-4">
+                <input type="text" name="code" maxlength="6" pattern="\d{6}" inputmode="numeric"
+                       class="form-control form-control-lg text-center fw-bold"
+                       style="letter-spacing: 0.4rem; font-size: 1.5rem;"
+                       placeholder="000000" required autofocus />
+            </div>
+
+            <button type="submit" class="btn btn-success w-100 py-2 fw-bold mb-3">Xác nhận</button>
+
+            <div class="text-center">
+                <a href="@Url.Action("Login", "Home")" class="text-muted small">Quay lại đăng nhập</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 80vh;
+        background: linear-gradient(135deg, #198754 0%, #157347 100%);
+        padding: 20px;
+    }
+
+    .login-box {
+        background: white;
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        width: 100%;
+        max-width: 420px;
+    }
+
+    .login-title {
+        text-align: center;
+        color: #333;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+</style>

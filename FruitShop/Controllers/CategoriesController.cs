@@ -13,8 +13,11 @@ using System.Text.Json;
 using System.Xml.Serialization;
 using System.Text;
 
+using FruitShop.Filters;
+
 namespace FruitShop.Controllers
 {
+    [AdminSecurityFilter]
     public class CategoriesController : Controller
     {
         private readonly FruitShopContext _context;

@@ -11,8 +11,11 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 
+using FruitShop.Filters;
+
 namespace FruitShop.Controllers
 {
+    [AdminSecurityFilter]
     public class InventoryController : Controller
     {
         private readonly FruitShopContext _context;

@@ -12,8 +12,11 @@ using System.Globalization;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 
+using FruitShop.Filters;
+
 namespace FruitShop.Controllers
 {
+    [AdminSecurityFilter]
     public class AdminOrdersController : Controller
     {
         private readonly FruitShopContext _context;

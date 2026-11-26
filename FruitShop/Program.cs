@@ -44,6 +44,7 @@ builder.Services.AddSwaggerGen(); // Hỗ trợ tài liệu API UI
 
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<FruitShop.Services.IpBanService>();
+builder.Services.AddSingleton<FruitShop.Services.TotpService>();
 builder.Services.AddSingleton<FruitShop.Interfaces.ISearchService, FruitShop.Services.MeiliSearchService>();
 builder.Services.AddScoped<FruitShop.Services.MeiliSearchSyncService>();
 builder.Services.AddScoped<FruitShop.Services.PasswordPolicyService>();
@@ -90,5 +91,44 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// AdminSeed: đọc từ User Secrets hoặc biến môi trường (không hard-code mật khẩu)
+using (var scope = app.Services.CreateScope())
+{
+    var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    var adminEmail = config["AdminSeed:Email"];
+    var adminPassword = config["AdminSeed:Password"];
+
+    if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
+    {
+        var db = scope.ServiceProvider.GetRequiredService<FruitShop.Models.FruitShopContext>();
+        var exists = db.Users.Any(u => u.Email == adminEmail && u.DeletedAt == null);
+        if (!exists)
+        {
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword);
+            var adminUser = new FruitShop.Models.User
+            {
+                Email = adminEmail.Trim(),
+                FullName = "Administrator",
+                PasswordHash = passwordHash,
+                RoleId = 1,
+                Status = 1,
+                IsVerified = 1,
+                CreatedAt = DateTime.UtcNow,
+                LastPasswordChangedAt = DateTime.UtcNow
+            };
+            db.Users.Add(adminUser);
+            db.SaveChanges();
+
+            db.PasswordHistories.Add(new FruitShop.Models.PasswordHistory
+            {
+                UserId = adminUser.Id,
+                PasswordHash = passwordHash,
+                CreatedAt = DateTime.UtcNow
+            });
+            db.SaveChanges();
+        }
+    }
+}
 
 app.Run();

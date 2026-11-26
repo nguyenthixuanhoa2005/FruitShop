@@ -2,8 +2,11 @@ using System.Diagnostics;
 using FruitShop.Models;
 using Microsoft.AspNetCore.Mvc;
 
+using FruitShop.Filters;
+
 namespace FruitShop.Controllers
 {
+    [AdminSecurityFilter]
     public class AdminHomeController : Controller
     {
         private readonly ILogger<AdminHomeController> _logger;

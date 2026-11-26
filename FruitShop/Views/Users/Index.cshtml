@@ -161,6 +161,12 @@
                     int index = ((Model.CurrentPage - 1) * Model.PageSize) + 1;
                     foreach (var item in Model.Users)
                     {
+                        bool isPermLocked = item.Status != 1;
+                        bool isTempLocked = !isPermLocked && item.LockoutEnd.HasValue && item.LockoutEnd.Value > DateTime.UtcNow;
+                        bool isLocked = isPermLocked || isTempLocked;
+                        int remainingLockMinutes = isTempLocked
+                            ? Math.Max(1, (int)Math.Ceiling((item.LockoutEnd!.Value - DateTime.UtcNow).TotalMinutes))
+                            : 0;
                         <tr class="table-row text-sm border-b border-gray-800/30 hover:bg-gray-800/20 transition-colors" data-id="@item.Id"
                             data-copy-fullname="@item.FullName" data-copy-email="@item.Email" data-copy-phone="@item.Phone"
                             data-copy-role="@item.RoleId" data-copy-status="@item.Status" data-copy-verified="@item.IsVerified"
@@ -179,10 +185,27 @@
                                 </span>
                             </td>
                             <td class="px-4 py-3" data-col-id="column-status">
-                                <span class="flex items-center gap-1.5 @(item.Status == 1 ? "text-green-400" : "text-red-400")">
-                                    <span class="w-1.5 h-1.5 rounded-full @(item.Status == 1 ? "bg-green-400 animate-pulse" : "bg-red-400")"></span>
-                                    @(item.Status == 1 ? "Hoạt động" : "Bị khóa")
-                                </span>
+                                @if (isPermLocked)
+                                {
+                                    <span class="flex items-center gap-1.5 text-red-400">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                                        Bị khóa
+                                    </span>
+                                }
+                                else if (isTempLocked)
+                                {
+                                    <span class="flex items-center gap-1.5 text-orange-400">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>
+                                        Khóa tạm (@remainingLockMinutes phút)
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="flex items-center gap-1.5 text-green-400">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                                        Hoạt động
+                                    </span>
+                                }
                             </td>
                             <td class="px-4 py-3" data-col-id="column-verified">
                                 @if(item.IsVerified == 1) {
@@ -194,13 +217,13 @@
                             <td class="px-4 py-3 text-center sticky-col-right" data-col-id="actions">
                                 <div class="flex items-center justify-center gap-1.5">
                                     <button type="button" class="viewBtn p-1.5 rounded-lg text-blue-400 hover:bg-blue-400/10 transition-all" title="Xem chi tiết" 
-                                            data-id="@item.Id" data-fullname="@item.FullName" data-email="@item.Email" data-phone="@item.Phone" data-role="@item.Role?.Name" data-status="@item.Status" data-verified="@item.IsVerified" data-avatar="@item.AvatarUrl" data-created="@item.CreatedAt">
+                                            data-id="@item.Id" data-fullname="@item.FullName" data-email="@item.Email" data-phone="@item.Phone" data-role="@item.Role?.Name" data-status="@item.Status" data-lockout="@(isTempLocked ? remainingLockMinutes.ToString() : "")" data-verified="@item.IsVerified" data-avatar="@item.AvatarUrl" data-created="@item.CreatedAt">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                                     </button>
                                     <button type="button" class="editBtn p-1.5 rounded-lg text-yellow-400 hover:bg-yellow-400/10 transition-all" title="Sửa">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                     </button>
-                                    <button type="button" class="toggleLockBtn p-1.5 rounded-lg @(item.Status == 1 ? "text-orange-400 hover:bg-orange-400/10" : "text-green-400 hover:bg-green-400/10") transition-all" title="@(item.Status == 1 ? "Khóa vĩnh viễn" : "Mở khóa")" data-id="@item.Id">
+                                    <button type="button" class="toggleLockBtn p-1.5 rounded-lg @(isLocked ? "text-green-400 hover:bg-green-400/10" : "text-orange-400 hover:bg-orange-400/10") transition-all" title="@(isLocked ? "Mở khóa" : "Khóa vĩnh viễn")" data-id="@item.Id">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                                     </button>
                                     <button type="button" class="deleteSingleBtn p-1.5 rounded-lg text-red-400 hover:bg-red-400/10 transition-all" title="Xóa" data-id="@item.Id">
@@ -507,7 +530,9 @@
                         document.getElementById('viewCreated').innerText = d.created;
                         document.getElementById('viewAvatar').src = d.avatar || "https://ui-avatars.com/api/?name=" + d.fullname;
                         
-                        document.getElementById('viewStatus').innerHTML = d.status == "1" ? '<span class="text-green-400 font-bold">Hoạt động</span>' : '<span class="text-red-400 font-bold">Bị khóa</span>';
+                        document.getElementById('viewStatus').innerHTML = d.status != "1"
+                            ? '<span class="text-red-400 font-bold">Bị khóa</span>'
+                            : (d.lockout ? `<span class="text-orange-400 font-bold">Khóa tạm (${d.lockout} phút)</span>` : '<span class="text-green-400 font-bold">Hoạt động</span>');
                         document.getElementById('viewVerified').innerHTML = d.verified == "1" ? '<span class="text-blue-400 font-bold">Đã xác thực</span>' : '<span class="text-gray-500 font-bold">Chưa xác thực</span>';
                         
                         document.getElementById('viewModal').classList.remove('hidden');
