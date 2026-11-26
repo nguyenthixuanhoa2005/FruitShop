@@ -1,0 +1,171 @@
+@model IEnumerable<FruitShop.Models.SecurityIncident>
+@{
+    ViewData["Title"] = "Quản lý sự cố bảo mật";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    var filterStatus = ViewData["FilterStatus"]?.ToString() ?? "";
+    var filterSeverity = ViewData["FilterSeverity"]?.ToString() ?? "";
+}
+
+<style>
+    .incident-card {
+        background-color: var(--bg-card);
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+    }
+    .incident-input {
+        background-color: var(--bg-input) !important;
+        border: 1px solid var(--border-color) !important;
+        color: var(--text-main) !important;
+    }
+    .incident-table {
+        color: var(--text-main) !important;
+        --bs-table-bg: transparent;
+        --bs-table-hover-bg: rgba(128, 128, 128, 0.08);
+        --bs-table-border-color: var(--border-color);
+    }
+    .incident-table thead th {
+        color: var(--text-muted) !important;
+        border-bottom: 1px solid var(--border-color) !important;
+    }
+    .incident-muted {
+        color: var(--text-muted) !important;
+    }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h3 class="fw-bold text-contrast mb-1">
+                <i class="bi bi-shield-exclamation text-danger me-2"></i>Quản lý sự cố bảo mật
+            </h3>
+            <p class="incident-muted small mb-0">Tiếp nhận, cập nhật trạng thái và gửi hướng dẫn xử lý lại cho người báo cáo</p>
+        </div>
+        <button id="themeToggle" class="btn-theme" title="Đổi giao diện Sáng / Tối (Alt + T)">
+            <i class="bi bi-sun-fill sun-icon"></i>
+            <i class="bi bi-moon-stars-fill moon-icon"></i>
+        </button>
+    </div>
+
+    <div class="incident-card rounded-4 p-3 mb-4 shadow-sm">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label incident-muted small text-uppercase fw-semibold">Mức độ</label>
+                <select name="severity" class="form-select incident-input">
+                    <option value="">Tất cả mức độ</option>
+                    <option value="Thấp" selected="@(filterSeverity == "Thấp")">Thấp</option>
+                    <option value="Trung bình" selected="@(filterSeverity == "Trung bình")">Trung bình</option>
+                    <option value="Cao" selected="@(filterSeverity == "Cao")">Cao</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label incident-muted small text-uppercase fw-semibold">Trạng thái</label>
+                <select name="status" class="form-select incident-input">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="Mới" selected="@(filterStatus == "Mới")">Mới</option>
+                    <option value="Đang xử lý" selected="@(filterStatus == "Đang xử lý")">Đang xử lý</option>
+                    <option value="Đã ngăn chặn" selected="@(filterStatus == "Đã ngăn chặn")">Đã ngăn chặn</option>
+                    <option value="Đã đóng" selected="@(filterStatus == "Đã đóng")">Đã đóng</option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary px-4">Lọc</button>
+                <a asp-action="Index" class="btn btn-outline-secondary px-3">Đặt lại</a>
+            </div>
+        </form>
+    </div>
+
+    @Html.AntiForgeryToken()
+
+    <div class="incident-card rounded-4 overflow-hidden shadow-sm">
+        <div class="table-responsive">
+            <table class="table incident-table table-hover align-middle mb-0">
+                <thead>
+                    <tr class="small text-uppercase">
+                        <th>#</th>
+                        <th>Thời gian</th>
+                        <th>Người báo cáo</th>
+                        <th>Tiêu đề &amp; Mô tả</th>
+                        <th>Mức độ</th>
+                        <th>Trạng thái</th>
+                        <th>Biện pháp xử lý / Hướng dẫn</th>
+                        <th class="text-end">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            var sevBadge = item.Severity switch
+                            {
+                                "Cao" => "bg-danger",
+                                "Trung bình" => "bg-warning text-dark",
+                                _ => "bg-info text-dark"
+                            };
+                            <tr data-id="@item.Id">
+                                <td class="incident-muted font-mono">#@item.Id</td>
+                                <td class="small incident-muted">@item.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="text-primary small fw-semibold">@item.ReportedBy</td>
+                                <td style="max-width: 280px;">
+                                    <div class="fw-semibold">@item.Title</div>
+                                    <div class="small incident-muted" style="white-space: normal;">@item.Description</div>
+                                </td>
+                                <td><span class="badge @sevBadge">@item.Severity</span></td>
+                                <td>
+                                    <select class="form-select form-select-sm incident-input status-select" style="min-width: 145px;">
+                                        <option value="Mới" selected="@(item.Status == "Mới")">Mới</option>
+                                        <option value="Đang xử lý" selected="@(item.Status == "Đang xử lý")">Đang xử lý</option>
+                                        <option value="Đã ngăn chặn" selected="@(item.Status == "Đã ngăn chặn")">Đã ngăn chặn</option>
+                                        <option value="Đã đóng" selected="@(item.Status == "Đã đóng")">Đã đóng</option>
+                                    </select>
+                                </td>
+                                <td style="min-width: 240px;">
+                                    <textarea class="form-control form-control-sm incident-input resolution-input" rows="2"
+                                              placeholder="Nhập biện pháp xử lý hoặc hướng dẫn gửi cho người dùng...">@item.ResolutionNote</textarea>
+                                </td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-success save-incident-btn px-3">Lưu &amp; Gửi</button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center incident-muted py-5">Chưa có sự cố bảo mật nào được ghi nhận.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.save-incident-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const row = this.closest('tr');
+                const id = row.dataset.id;
+                const status = row.querySelector('.status-select').value;
+                const resolutionNote = row.querySelector('.resolution-input').value;
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                const body = new URLSearchParams({ id, status, resolutionNote });
+                fetch('/SecurityIncidents/UpdateStatus', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': token
+                    },
+                    body: body.toString()
+                })
+                .then(r => r.json())
+                .then(res => {
+                    alert(res.message);
+                    if (res.success) location.reload();
+                });
+            });
+        });
+    </script>
+}

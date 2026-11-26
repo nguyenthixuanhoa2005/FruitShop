@@ -41,6 +41,8 @@ public partial class FruitShopContext : DbContext
 
     public virtual DbSet<Role> Roles { get; set; }
 
+    public virtual DbSet<SecurityIncident> SecurityIncidents { get; set; }
+
     public virtual DbSet<Supplier> Suppliers { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
@@ -546,6 +548,23 @@ public partial class FruitShopContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_password_histories_users");
+        });
+
+        modelBuilder.Entity<SecurityIncident>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.ToTable("security_incidents");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ReportedBy).HasMaxLength(150).HasColumnName("reported_by");
+            entity.Property(e => e.Title).HasMaxLength(200).HasColumnName("title");
+            entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.Severity).HasMaxLength(30).HasColumnName("severity");
+            entity.Property(e => e.Status).HasMaxLength(30).HasDefaultValue("Mới").HasColumnName("status");
+            entity.Property(e => e.AssignedTo).HasMaxLength(150).HasColumnName("assigned_to");
+            entity.Property(e => e.ResolutionNote).HasColumnName("resolution_note");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())").HasColumnName("created_at");
+            entity.Property(e => e.ResolvedAt).HasColumnName("resolved_at");
         });
 
         OnModelCreatingPartial(modelBuilder);

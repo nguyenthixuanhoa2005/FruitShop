@@ -568,6 +568,68 @@ namespace FruitShop.Controllers
             return View();
         }
 
+        [HttpGet]
+        public async Task<IActionResult> ReportIncident()
+        {
+            var userEmail = HttpContext.Session.GetString("UserEmail")
+                ?? HttpContext.Session.GetString("LastIncidentEmail")
+                ?? "";
+            var model = new SecurityIncident
+            {
+                ReportedBy = userEmail
+            };
+            ViewBag.MyIncidents = await LoadMyIncidentsAsync(userEmail);
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReportIncident(SecurityIncident model)
+        {
+            var allowedSeverities = new[] { "Thấp", "Trung bình", "Cao" };
+            if (!allowedSeverities.Contains(model.Severity))
+            {
+                model.Severity = "Thấp";
+            }
+
+            if (!ModelState.IsValid)
+            {
+                ViewBag.MyIncidents = await LoadMyIncidentsAsync(model.ReportedBy);
+                return View(model);
+            }
+
+            model.Status = "Mới";
+            model.CreatedAt = DateTime.UtcNow;
+            model.ResolvedAt = null;
+            model.AssignedTo = null;
+            model.ResolutionNote = null;
+
+            _context.SecurityIncidents.Add(model);
+            await _context.SaveChangesAsync();
+
+            HttpContext.Session.SetString("LastIncidentEmail", model.ReportedBy.Trim());
+            _logger.LogWarning("Nhận báo cáo sự cố bảo mật mới: id={Id}, severity={Severity}, by={By}, title={Title}",
+                model.Id, model.Severity, model.ReportedBy, model.Title);
+
+            TempData["SuccessMessage"] = "Đã gửi báo cáo sự cố bảo mật thành công. Đầu mối ATTT sẽ tiếp nhận và phản hồi hướng dẫn xử lý ngay bên dưới.";
+            return RedirectToAction("ReportIncident");
+        }
+
+        private async Task<List<SecurityIncident>> LoadMyIncidentsAsync(string? email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return new List<SecurityIncident>();
+            }
+
+            var trimmed = email.Trim();
+            return await _context.SecurityIncidents
+                .AsNoTracking()
+                .Where(i => i.ReportedBy == trimmed)
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
+        }
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {

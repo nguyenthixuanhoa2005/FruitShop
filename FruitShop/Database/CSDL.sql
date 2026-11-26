@@ -10,6 +10,8 @@ IF OBJECT_ID('inventory_logs', 'U') IS NOT NULL DROP TABLE inventory_logs;
 IF OBJECT_ID('cart_items', 'U')     IS NOT NULL DROP TABLE cart_items;
 IF OBJECT_ID('reviews', 'U')        IS NOT NULL DROP TABLE reviews;
 IF OBJECT_ID('product_images', 'U') IS NOT NULL DROP TABLE product_images;
+IF OBJECT_ID('password_histories', 'U') IS NOT NULL DROP TABLE password_histories;
+IF OBJECT_ID('security_incidents', 'U') IS NOT NULL DROP TABLE security_incidents;
 
 -- BƯỚC 2: Xóa các bảng nghiệp vụ chính (Chứa FK đến Master Data)
 IF OBJECT_ID('orders', 'U')         IS NOT NULL DROP TABLE orders;
@@ -65,6 +67,20 @@ CREATE TABLE password_histories (
     password_hash NVARCHAR(255) NOT NULL,
     created_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Bảng báo cáo & quản lý sự cố bảo mật
+CREATE TABLE security_incidents (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    reported_by NVARCHAR(150) NOT NULL,
+    title NVARCHAR(200) NOT NULL,
+    description NVARCHAR(MAX) NOT NULL,
+    severity NVARCHAR(30) NOT NULL,
+    status NVARCHAR(30) NOT NULL DEFAULT N'Mới',
+    assigned_to NVARCHAR(150) NULL,
+    resolution_note NVARCHAR(MAX) NULL,
+    created_at DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+    resolved_at DATETIME2 NULL
 );
 
 -- 3. SUPPLIERS
@@ -281,4 +297,5 @@ CREATE INDEX idx_coupons_code ON coupons(code);
 CREATE INDEX idx_orders_coupon ON orders(coupon_id);
 CREATE INDEX idx_coupon_usage_user ON coupon_usages(user_id);
 
-
+--lệnh chạy kiểm tra lại dữ liệu phone mã hóa
+SELECT id, email, phone FROM Users WHERE phone IS NOT NULL
