@@ -6,6 +6,7 @@ application.json
 .env
 .env.*
 secrets.json
+demo.sh
 
 # Build and OS files
 [Dd]ebug/
